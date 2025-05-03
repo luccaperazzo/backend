@@ -1,16 +1,44 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken'); // Asegúrate de tener instalado jwt (npm install jsonwebtoken)
 
-// Registro
+// Registro de usuario
 router.post('/register', async (req, res) => {
   try {
     const { nombre, apellido, email, password, fechaNacimiento, role } = req.body;
+
+    // Validar si el email ya existe
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email ya registrado' });
+    }
+
+    // Crear usuario
     const user = new User({ nombre, apellido, email, password, fechaNacimiento, role });
     await user.save();
-    res.status(201).json({ message: 'Usuario creado' });
+
+    // Generar token JWT
+    const token = jwt.sign(
+      { user: { id: user._id } }, 
+      process.env.JWT_SECRET, // Añade JWT_SECRET a tu .env
+      { expiresIn: '1h' }
+    );
+
+    // Respuesta con datos del usuario y token (sin password)
+    res.status(201).json({
+      user: {
+        nombre: user.nombre,
+        apellido: user.apellido,
+        email: user.email,
+        role: user.role,
+        _id: user._id,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
+      token
+    });
+
   } catch (err) {
     if (err.code === 11000) {
       return res.status(400).json({ error: 'Email ya registrado' });
