@@ -1,7 +1,33 @@
+const Joi = require('joi');
 const express = require('express');
 const router = express.Router();
 const Service = require('../models/Service');
 const authMiddleware = require('../middleware/authMiddleware');
+
+
+// Esquema de validación para crear un servicio
+const serviceSchema = Joi.object({
+  titulo: Joi.string().min(3).required().messages({
+    'string.base': 'El título debe ser un texto',
+    'string.min': 'El título debe tener al menos 3 caracteres',
+    'any.required': 'El título es obligatorio'
+  }),
+  descripcion: Joi.string().min(5).required().messages({
+    'string.base': 'La descripción debe ser un texto',
+    'string.min': 'La descripción debe tener al menos 5 caracteres',
+    'any.required': 'La descripción es obligatoria'
+  }),
+  precio: Joi.number().positive().required().messages({
+    'number.base': 'El precio debe ser un número',
+    'number.positive': 'El precio debe ser positivo',
+    'any.required': 'El precio es obligatorio'
+  }),
+  categoria: Joi.string().valid('Entrenamiento', 'Nutrición', 'Bienestar').required().messages({
+    'string.base': 'La categoría debe ser un texto',
+    'any.required': 'La categoría es obligatoria',
+    'any.only': 'La categoría debe ser una de las siguientes: Entrenamiento, Nutrición, Bienestar'
+  })
+});
 
 // 1️⃣ Crear un nuevo servicio (solo entrenadores)
 router.post('/crear', authMiddleware, async (req, res) => {
