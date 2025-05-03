@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -25,6 +23,8 @@ app.use('/api/service', serviceRoutes);
 const reservaRoutes = require('./routes/reserva');
 app.use('/api/reserva', reservaRoutes);
 
+const trainersRoutes = require('./routes/trainers');
+app.use('/api/trainers', trainersRoutes);
 
 // Ruta de prueba
 app.get('/api/ping', (req, res) => {
