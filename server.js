@@ -15,15 +15,15 @@ const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
 // Rutas protegidas (middleware ejemplo)
-const rutaProtegida = require('./routes/protegida');
+const rutaProtegida = require('./routes/protected');
 app.use('/api', rutaProtegida);
 
 // Rutas de servicio
 const serviceRoutes = require('./routes/service');
 app.use('/api/service', serviceRoutes);
 
-const reservaRoutes = require('./routes/reserva');
-app.use('/api/reserva', reservaRoutes);
+const reservaRoutes = require('./routes/reserve');
+app.use('/api/reserve', reservaRoutes);
 
 const trainersRoutes = require('./routes/trainers');
 app.use('/api/trainers', trainersRoutes);

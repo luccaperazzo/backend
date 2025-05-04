@@ -1,10 +1,10 @@
-// backend/routes/protegida.js
+// backend/routes/protected.js
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Ruta protegida (solo usuarios autenticados pueden acceder)
-router.get('/privada', authMiddleware, (req, res) => {
+// Ruta protected (solo usuarios autenticados pueden acceder)
+router.get('/private', authMiddleware, (req, res) => {
   res.json({ message: `¡Hola ${req.user.userId}! Estás autenticado ✅` });
 });
 

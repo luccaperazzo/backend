@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const Reserva = require('../models/Reserva');
+const reserve = require('../models/reserva');
 const Service = require('../models/Service');
 
-// Crear una reserva (solo clientes)
+// Crear una reserve (solo clientes)
 router.post('/', authMiddleware, async (req, res) => {
   if (req.user.role !== 'cliente') {
     return res.status(403).json({ error: 'Solo los clientes pueden contratar servicios' });
@@ -16,7 +16,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const servicio = await Service.findById(servicioId);
     if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
-    const nueva = new Reserva({
+    const nueva = new reserve({
       cliente: req.user.userId,
       servicio: servicioId
     });
@@ -24,7 +24,7 @@ router.post('/', authMiddleware, async (req, res) => {
     await nueva.save();
     res.status(201).json(nueva);
   } catch (err) {
-    res.status(500).json({ error: 'Error al crear la reserva' });
+    res.status(500).json({ error: 'Error al crear la reserve' });
   }
 });
 
@@ -35,7 +35,7 @@ router.get('/mis-servicios', authMiddleware, async (req, res) => {
   }
 
   try {
-    const reservas = await Reserva.find()
+    const reservas = await reserve.find()
       .populate({
         path: 'servicio',
         match: { entrenador: req.user.userId },
