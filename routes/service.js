@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Service = require('../models/Service');
 const authMiddleware = require('../middleware/authMiddleware');
+const User = require('../models/User');
 
 // Esquema de validación para crear/actualizar un servicio
 const serviceSchema = Joi.object({
@@ -30,7 +31,12 @@ const serviceSchema = Joi.object({
     'number.base': 'La duración debe ser un número',
     'number.positive': 'La duración debe ser positiva',
     'any.required': 'La duración es obligatoria'
+  }),
+  presencial: Joi.boolean().required().messages({
+    'boolean.base': 'El campo presencial debe ser verdadero o falso',
+    'any.required': 'Debe indicarse si el servicio es presencial o no'
   })
+  
 });
 
 // 1️⃣ Crear un nuevo servicio (solo entrenadores)
@@ -45,7 +51,7 @@ router.post('/crear', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { titulo, descripcion, precio, categoria, duracion } = value;
+  const { titulo, descripcion, precio, categoria, duracion, presencial } = value;
 
   try {
     const newService = new Service({
@@ -54,7 +60,8 @@ router.post('/crear', authMiddleware, async (req, res) => {
       precio,
       categoria,
       duracion,           // <-- guardamos duración definida por entrenador
-      entrenador: req.user.userId
+      entrenador: req.user.userId,
+      presencial
     });
     await newService.save();
     res.status(201).json(newService);
@@ -63,21 +70,76 @@ router.post('/crear', authMiddleware, async (req, res) => {
   }
 });
 
-// 2️⃣ Búsqueda con query params
-router.get('/buscar', async (req, res) => {
-  try {
-    const { categoria, precioMin, precioMax } = req.query;
-    const filtro = {};
-    if (categoria) filtro.categoria = categoria;
-    if (precioMin) filtro.precio = { ...filtro.precio, $gte: Number(precioMin) };
-    if (precioMax) filtro.precio = { ...filtro.precio, $lte: Number(precioMax) };
+// GET /api/entrenadores
 
-    const resultados = await Service.find(filtro).populate('entrenador', 'nombre');
-    res.json(resultados);
-  } catch (err) {
-    res.status(500).json({ error: 'Error en la búsqueda' });
+
+router.get('/entrenadores', async (req, res) => {
+  try {
+    const {
+      categoria,
+      presencial,
+      precioMin,
+      precioMax,
+      duracionMin,
+      duracionMax,
+      zona,
+      idioma
+    } = req.query;
+
+    // Paso 1: Filtro de servicios (si hay filtros de servicio)
+    const servicioFiltro = {
+      ...(categoria && { categoria }),
+      ...(presencial !== undefined && { presencial: presencial === 'true' }),
+      ...(precioMin && { precio: { $gte: parseFloat(precioMin) } }),
+      ...(precioMax && {
+        precio: {
+          ...(precioMin ? { $gte: parseFloat(precioMin) } : {}),
+          $lte: parseFloat(precioMax)
+        }
+      }),
+      ...(duracionMin && { duracion: { $gte: parseInt(duracionMin) } }),
+      ...(duracionMax && {
+        duracion: {
+          ...(duracionMin ? { $gte: parseInt(duracionMin) } : {}),
+          $lte: parseInt(duracionMax)
+        }
+      })
+    };
+
+    // Paso 2: Buscar servicios que coincidan con el filtro
+    const servicios = await Service.find(servicioFiltro);
+    console.log('⏺️ Servicios encontrados:', servicios.length);
+    if (servicios.length === 0) {
+      return res.json({ entrenadores: [] });
+    }
+
+    // Paso 3: Obtener IDs de entrenadores asociados a esos servicios
+    const idsEntrenadores = [...new Set(servicios.map(s => s.entrenador.toString()))];
+    console.log('⏺️ IDs de entrenadores:', idsEntrenadores);
+
+    // Paso 4: Filtro de entrenadores (si hay filtros de entrenadores)
+    const userFiltro = {
+      _id: { $in: idsEntrenadores },
+      role: 'entrenador',
+      ...(zona && { zona }),
+      ...(idioma && { idiomas: idioma })
+    };
+
+    // Paso 5: Buscar entrenadores que coincidan con el filtro
+    const entrenadores = await User.find(userFiltro).select('-password');
+    console.log('⏺️ Entrenadores encontrados:', entrenadores.length);
+
+    // Paso 6: Devolver entrenadores
+    res.json({ entrenadores });
+  } catch (error) {
+    console.error('❌ Error en /entrenadores:', error);
+    res.status(500).json({ error: 'Error al obtener entrenadores' });
   }
 });
+
+
+
+
 
 // 3️⃣ Listar todos los servicios (público)
 router.get('/', async (req, res) => {

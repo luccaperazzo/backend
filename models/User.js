@@ -3,12 +3,31 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  nombre: { type: String, required: true },
-  apellido: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  nombre:          { type: String, required: true },
+  apellido:        { type: String, required: true },
+  email:           { type: String, required: true, unique: true },
+  password:        { type: String, required: true },
   fechaNacimiento: { type: Date, required: true },
-  role: { type: String, enum: ['cliente', 'entrenador'], default: 'cliente' },
+  role:            { type: String, enum: ['cliente', 'entrenador'], default: 'cliente' },
+
+  // Campos exclusivos para entrenadores:
+  zona: {
+    type: String,
+    required: function() { return this.role === 'entrenador'; }
+  },
+  idiomas: {
+    type: [String],
+    required: function() { return this.role === 'entrenador'; },
+    validate: {
+      validator: function(arr) {
+        // Si no es entrenador, no valida la longitud
+        if (this.role !== 'entrenador') return true;
+        return Array.isArray(arr) && arr.length > 0; // Si es entrenador, debe tener al menos un idioma
+      },
+      message: 'Un entrenador debe indicar al menos un idioma.'
+    }
+  }
+
 }, { timestamps: true });
 
 // Antes de guardar, encriptar la contraseña

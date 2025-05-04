@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken'); // Asegúrate de tener instalado jwt (npm i
 // Registro de usuario
 router.post('/register', async (req, res) => {
   try {
-    const { nombre, apellido, email, password, fechaNacimiento, role } = req.body;
+    const { nombre, apellido, email, password, fechaNacimiento, role, zona, idiomas } = req.body;
 
     // Validar si el email ya existe
     const existingUser = await User.findOne({ email });
@@ -15,15 +15,31 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email ya registrado' });
     }
 
+    // Crear el objeto de usuario
+    const userData = { 
+      nombre, 
+      apellido, 
+      email, 
+      password, 
+      fechaNacimiento, 
+      role 
+    };
+
+    // Si es un 'entrenador', agregar los campos adicionales
+    if (role === 'entrenador') {
+      userData.zona = zona;
+      userData.idiomas = idiomas;
+    }
+
     // Crear usuario
-    const user = new User({ nombre, apellido, email, password, fechaNacimiento, role });
+    const user = new User(userData);
     await user.save();
 
     // Generar token JWT
     const token = jwt.sign(
-      { user: { id: user._id } }, 
-      process.env.JWT_SECRET, // Añade JWT_SECRET a tu .env
-      { expiresIn: '1h' }
+      { user: { id: user._id, role: user.role } },  // Incluir id y role del usuario en el payload
+      process.env.JWT_SECRET,                      // Clave secreta
+      { expiresIn: '1h' }                         // Expira en 1 hora
     );
 
     // Respuesta con datos del usuario y token (sin password)
@@ -41,12 +57,14 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (err) {
+    console.error('❌ Error al registrar usuario:', err);
     if (err.code === 11000) {
       return res.status(400).json({ error: 'Email ya registrado' });
     }
     res.status(500).json({ error: 'Error al crear usuario' });
   }
 });
+
 
 // Login
 router.post('/login', async (req, res) => {

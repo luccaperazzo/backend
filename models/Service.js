@@ -8,7 +8,8 @@ const serviceSchema = new mongoose.Schema({
   categoria:   { type: String, enum: ['Entrenamiento', 'Nutrición', 'Consultoría'], required: true },
   duracion:    { type: Number, required: true },        // <-- en minutos
   fechaCreacion:{ type: Date, default: Date.now },
-  publicado:   { type: Boolean, default: true }
+  publicado:   { type: Boolean, default: true },
+  presencial: { type: Boolean, required: true}  // Si el servicio es presencial o no
 }, { timestamps: true });
 
 module.exports = mongoose.model('Service', serviceSchema);
