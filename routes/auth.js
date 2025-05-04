@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const sendEmail = require('../utils/sendEmail');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken'); // Asegúrate de tener instalado jwt (npm install jsonwebtoken)
 
@@ -71,4 +72,31 @@ router.post('/login', async (req, res) => {
   }
 });
 
+/*
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+
+  // Generar token y expiración
+  const token = crypto.randomBytes(32).toString('hex');
+  user.resetToken = token;
+  user.resetTokenExpires = Date.now() + 15 * 60 * 1000; // 15 min
+  await user.save();
+
+  // Link de recuperación (ajustá tu dominio/frontend)
+  const resetLink = `https://tu-frontend.com/reset-password?token=${token}`;
+
+  // Enviar email usando SendGrid
+  await sendEmail(
+    user.email,
+    'Recuperar contraseña - Marketplace',
+    `<p>Hacé clic <a href="${resetLink}">aquí</a> para restablecer tu contraseña.</p>
+     <p>El link expira en 15 minutos.</p>`
+  );
+
+  res.json({ message: 'Email de recuperación enviado. Revisá tu bandeja.' });
+});
 module.exports = router;
+*/
+
