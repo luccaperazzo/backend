@@ -1,0 +1,211 @@
+Pensado durante un par de segundos
+
+
+Aquí tienes un resumen de **todas las acciones** que tenés que probar en Postman, con **método**, **URL**, **headers** y **body** (cuando corresponda):
+
+---
+
+## 1. Autenticación
+
+### 1.1 Registro de usuario
+
+* **POST** `http://localhost:3001/api/auth/register`
+* **Headers**
+
+  * `Content-Type: application/json`
+* **Body (JSON)**
+
+  ```json
+  {
+    "nombre": "Juan",
+    "apellido": "Pérez",
+    "email": "juan@example.com",
+    "password": "StrongP4ss!",
+    "fechaNacimiento": "1990-01-01",
+    "role": "entrenador"    // o "cliente"
+  }
+  ```
+
+### 1.2 Login
+
+* **POST** `http://localhost:3001/api/auth/login`
+* **Headers**
+
+  * `Content-Type: application/json`
+* **Body (JSON)**
+
+  ```json
+  {
+    "email": "juan@example.com",
+    "password": "StrongP4ss!"
+  }
+  ```
+* **Respuesta**
+
+  ```json
+  { "token": "Bearer eyJhbGciOiJIUzI1..." }
+  ```
+
+---
+
+## 2. Verificación de API
+
+### 2.1 Ping / Healthcheck
+
+* **GET** `http://localhost:3001/api/ping`
+* **Headers**
+
+  * *(ninguno necesario)*
+* **Respuesta**
+
+  ```json
+  { "message": "API funcionando 💪" }
+  ```
+
+---
+
+## 3. Servicios
+
+> **Nota:** Para las rutas protegidas, agrega el header:
+>
+> ```
+> Authorization: Bearer <tu_token>
+> ```
+
+### 3.1 Crear un servicio
+
+* **POST** `http://localhost:3001/api/service/crear`
+* **Headers**
+
+  * `Content-Type: application/json`
+  * `Authorization: Bearer <token_entrenador>`
+* **Body (JSON)**
+
+  ```json
+  {
+    "titulo": "Entrenamiento personalizado",
+    "descripcion": "Sesión de fitness a medida",
+    "precio": 300,
+    "categoria": "Entrenamiento"
+  }
+  ```
+
+### 3.2 Listar todos los servicios
+
+* **GET** `http://localhost:3001/api/service`
+* **Headers**
+
+  * *(ninguno necesario)*
+
+### 3.3 Buscar servicios con filtros
+
+* **GET** `http://localhost:3001/api/service/buscar?categoria=Entrenamiento&precioMin=100&precioMax=500`
+* **Headers**
+
+  * *(ninguno necesario)*
+
+### 3.4 Detalle de un servicio
+
+* **GET** `http://localhost:3001/api/service/:id`
+
+  * Reemplaza `:id` por el `_id` del servicio.
+* **Headers**
+
+  * *(ninguno necesario)*
+
+### 3.5 Actualizar un servicio
+
+* **PUT** `http://localhost:3001/api/service/:id`
+* **Headers**
+
+  * `Content-Type: application/json`
+  * `Authorization: Bearer <token_entrenador>`
+* **Body (JSON)**
+
+  ```json
+  {
+    "titulo": "Entrenamiento avanzado",
+    "descripcion": "Para todos los niveles",
+    "precio": 400,
+    "categoria": "Entrenamiento"
+  }
+  ```
+
+### 3.6 Eliminar un servicio
+
+* **DELETE** `http://localhost:3001/api/service/:id`
+* **Headers**
+
+  * `Authorization: Bearer <token_entrenador>`
+
+---
+
+## 4. Reservas / Contrataciones
+
+### 4.1 Crear una reserva (cliente)
+
+* **POST** `http://localhost:3001/api/reserva`
+* **Headers**
+
+  * `Content-Type: application/json`
+  * `Authorization: Bearer <token_cliente>`
+* **Body (JSON)**
+
+  ```json
+  {
+    "servicioId": "6813b816d5c7b7a9255779f6"
+  }
+  ```
+
+### 4.2 Ver reservas de mis servicios (entrenador)
+
+* **GET** `http://localhost:3001/api/reserva/mis-servicios`
+* **Headers**
+
+  * `Authorization: Bearer <token_entrenador>`
+
+---
+
+## 5. Gestión de estados de reserva
+
+### 5.1 Aceptar o rechazar una reserva (entrenador)
+
+* **PATCH** `http://localhost:3001/api/reserva/:id/status`
+* **Headers**
+
+  * `Content-Type: application/json`
+  * `Authorization: Bearer <token_entrenador>`
+* **Body (JSON)**
+
+  ```json
+  { "status": "Aceptado" }
+  ```
+
+  o
+
+  ```json
+  { "status": "Cancelado" }
+  ```
+
+### 5.2 Completar una reserva (entrenador)
+
+* **PATCH** `http://localhost:3001/api/reserva/:id/complete`
+* **Headers**
+
+  * `Authorization: Bearer <token_entrenador>`
+
+### 5.3 Cancelar una reserva (cliente)
+
+* **PATCH** `http://localhost:3001/api/reserva/:id/cancel`
+* **Headers**
+
+  * `Authorization: Bearer <token_cliente>`
+
+---
+
+Con esta lista podés verificar **todas** las interacciones posibles entre Postman y tu API. Solo asegurate de:
+
+1. Levantar el servidor (`npm start` o `nodemon server.js`).
+2. Usar el **token** correcto en `Authorization` para rutas protegidas.
+
+¡A probar! 🚀
