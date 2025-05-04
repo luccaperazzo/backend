@@ -41,8 +41,7 @@ router.post('/crear', authMiddleware, async (req, res) => {
       descripcion,
       precio,
       categoria,
-      entrenador: req.user.userId,
-      publicado
+      entrenador: req.user.userId
     });
     await newService.save();
     res.status(201).json(newService);
@@ -69,7 +68,7 @@ router.get('/buscar', async (req, res) => {
 // 3️⃣ Listar todos los servicios (público)
 router.get('/', async (req, res) => {
   try {
-    const servicios = await Servicio.find({ publicado: true }).populate('entrenador');
+    const servicios = await Service.find({ publicado: true }).populate('entrenador');
     res.json(servicios);
   } catch (err) {
     res.status(500).json({ msg: 'Error al traer los servicios' });
@@ -109,6 +108,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const servicio = await Service.findById(req.params.id);
+    console.log('ID del servicio:', servicio.entrenador.toString());
+    console.log('ID del usuario autenticado:', req.user.id);
     if (!servicio) return res.status(404).json({ error: 'No existe el servicio' });
     if (servicio.entrenador.toString() !== req.user.userId) {
       return res.status(403).json({ error: 'No autorizado' });
@@ -125,12 +126,13 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // PATCH /servicios/:id/publicar
 router.patch('/:id/publicar', authMiddleware, async (req, res) => {
   try {
-    const servicio = await Servicio.findById(req.params.id);
-
+    const servicio = await Service.findById(req.params.id);
+    console.log('ID del servicio:', servicio.entrenador.toString());
+    console.log('ID del usuario autenticado:', req.user.id);
     if (!servicio) return res.status(404).json({ msg: 'Servicio no encontrado' });
 
     // Validar que sea el dueño del servicio
-    if (servicio.entrenador.toString() !== req.user.id)
+    if (servicio.entrenador.toString() !== req.user.userId)
       return res.status(403).json({ msg: 'No autorizado' });
 
     servicio.publicado = !servicio.publicado; // alternar estado

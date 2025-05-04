@@ -72,7 +72,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-/*
+
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
@@ -97,6 +97,7 @@ router.post('/forgot-password', async (req, res) => {
 
   res.json({ message: 'Email de recuperación enviado. Revisá tu bandeja.' });
 });
+
 module.exports = router;
-*/
+
 
