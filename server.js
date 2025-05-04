@@ -1,9 +1,8 @@
 require('dotenv').config();
 
-const express = require('express');
+const express  = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
-require('dotenv').config();
+const cors     = require('cors');
 
 const app = express();
 
@@ -11,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Rutas de autenticación
-const authRoutes = require('./routes/auth');
+const authRoutes    = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
 // Rutas protegidas (middleware ejemplo)
@@ -22,9 +21,14 @@ app.use('/api', rutaProtegida);
 const serviceRoutes = require('./routes/service');
 app.use('/api/service', serviceRoutes);
 
+// Rutas de reserva (incluye endpoints de estado y comentarios)
 const reservaRoutes = require('./routes/reserve');
 app.use('/api/reserve', reservaRoutes);
 
+// Inicializamos el cron que actualiza reservas automáticamente
+require('./utils/cron');
+
+// Rutas de entrenadores
 const trainersRoutes = require('./routes/trainers');
 app.use('/api/trainers', trainersRoutes);
 
@@ -35,7 +39,7 @@ app.get('/api/ping', (req, res) => {
 
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
+  useNewUrlParser:    true,
   useUnifiedTopology: true
 })
 .then(() => console.log('✅ Conectado a MongoDB'))

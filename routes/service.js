@@ -4,8 +4,7 @@ const router = express.Router();
 const Service = require('../models/Service');
 const authMiddleware = require('../middleware/authMiddleware');
 
-
-// Esquema de validación para crear un servicio
+// Esquema de validación para crear/actualizar un servicio
 const serviceSchema = Joi.object({
   titulo: Joi.string().min(3).required().messages({
     'string.base': 'El título debe ser un texto',
@@ -25,7 +24,12 @@ const serviceSchema = Joi.object({
   categoria: Joi.string().valid('Entrenamiento', 'Nutrición', 'Bienestar').required().messages({
     'string.base': 'La categoría debe ser un texto',
     'any.required': 'La categoría es obligatoria',
-    'any.only': 'La categoría debe ser una de las siguientes: Entrenamiento, Nutrición, Bienestar'
+    'any.only': 'La categoría debe ser una de: Entrenamiento, Nutrición, Bienestar'
+  }),
+  duracion: Joi.number().positive().required().messages({
+    'number.base': 'La duración debe ser un número',
+    'number.positive': 'La duración debe ser positiva',
+    'any.required': 'La duración es obligatoria'
   })
 });
 
@@ -34,13 +38,22 @@ router.post('/crear', authMiddleware, async (req, res) => {
   if (req.user.role !== 'entrenador') {
     return res.status(403).json({ error: 'No autorizado. Solo entrenadores pueden crear servicios.' });
   }
-  const { titulo, descripcion, precio, categoria } = req.body;
+
+  // Validación con Joi
+  const { error, value } = serviceSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+
+  const { titulo, descripcion, precio, categoria, duracion } = value;
+
   try {
     const newService = new Service({
       titulo,
       descripcion,
       precio,
       categoria,
+      duracion,           // <-- guardamos duración definida por entrenador
       entrenador: req.user.userId
     });
     await newService.save();
@@ -50,7 +63,7 @@ router.post('/crear', authMiddleware, async (req, res) => {
   }
 });
 
-// 2️⃣ Búsqueda con query params: /api/service/buscar?categoria=Nutrición&precioMin=100&precioMax=500
+// 2️⃣ Búsqueda con query params
 router.get('/buscar', async (req, res) => {
   try {
     const { categoria, precioMin, precioMax } = req.query;
@@ -58,6 +71,7 @@ router.get('/buscar', async (req, res) => {
     if (categoria) filtro.categoria = categoria;
     if (precioMin) filtro.precio = { ...filtro.precio, $gte: Number(precioMin) };
     if (precioMax) filtro.precio = { ...filtro.precio, $lte: Number(precioMax) };
+
     const resultados = await Service.find(filtro).populate('entrenador', 'nombre');
     res.json(resultados);
   } catch (err) {
@@ -74,7 +88,6 @@ router.get('/', async (req, res) => {
     res.status(500).json({ msg: 'Error al traer los servicios' });
   }
 });
-
 
 // 4️⃣ Detalle de un servicio por ID (público)
 router.get('/:id', async (req, res) => {
@@ -96,7 +109,14 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (servicio.entrenador.toString() !== req.user.userId) {
       return res.status(403).json({ error: 'No autorizado' });
     }
-    Object.assign(servicio, req.body);
+
+    // Validar body en actualización también
+    const { error, value } = serviceSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    Object.assign(servicio, value); // incluye duracion
     await servicio.save();
     res.json(servicio);
   } catch (err) {
@@ -108,8 +128,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const servicio = await Service.findById(req.params.id);
-    console.log('ID del servicio:', servicio.entrenador.toString());
-    console.log('ID del usuario autenticado:', req.user.id);
     if (!servicio) return res.status(404).json({ error: 'No existe el servicio' });
     if (servicio.entrenador.toString() !== req.user.userId) {
       return res.status(403).json({ error: 'No autorizado' });
@@ -121,28 +139,20 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// routes/servicios.js
-
-// PATCH /servicios/:id/publicar
+// 7️⃣ Publicar/despublicar
 router.patch('/:id/publicar', authMiddleware, async (req, res) => {
   try {
     const servicio = await Service.findById(req.params.id);
-    console.log('ID del servicio:', servicio.entrenador.toString());
-    console.log('ID del usuario autenticado:', req.user.id);
     if (!servicio) return res.status(404).json({ msg: 'Servicio no encontrado' });
-
-    // Validar que sea el dueño del servicio
-    if (servicio.entrenador.toString() !== req.user.userId)
+    if (servicio.entrenador.toString() !== req.user.userId) {
       return res.status(403).json({ msg: 'No autorizado' });
-
-    servicio.publicado = !servicio.publicado; // alternar estado
+    }
+    servicio.publicado = !servicio.publicado;
     await servicio.save();
-
     res.json({ msg: `Servicio ${servicio.publicado ? 'publicado' : 'despublicado'}` });
   } catch (err) {
     res.status(500).json({ msg: 'Error del servidor' });
   }
 });
-
 
 module.exports = router;
