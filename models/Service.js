@@ -7,7 +7,8 @@ const serviceSchema = new mongoose.Schema({
   precio: { type: Number, required: true },
   entrenador: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   categoria: { type: String, enum: ['Entrenamiento', 'Nutrición', 'Consultoría'], required: true },
-  fechaCreacion: { type: Date, default: Date.now }
+  fechaCreacion: { type: Date, default: Date.now },
+  publicado : { type: Boolean, default: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Service', serviceSchema);

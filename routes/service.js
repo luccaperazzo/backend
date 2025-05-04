@@ -41,7 +41,8 @@ router.post('/crear', authMiddleware, async (req, res) => {
       descripcion,
       precio,
       categoria,
-      entrenador: req.user.userId
+      entrenador: req.user.userId,
+      publicado
     });
     await newService.save();
     res.status(201).json(newService);
@@ -68,12 +69,13 @@ router.get('/buscar', async (req, res) => {
 // 3️⃣ Listar todos los servicios (público)
 router.get('/', async (req, res) => {
   try {
-    const servicios = await Service.find().populate('entrenador', 'nombre apellido');
+    const servicios = await Servicio.find({ publicado: true }).populate('entrenador');
     res.json(servicios);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener servicios' });
+    res.status(500).json({ msg: 'Error al traer los servicios' });
   }
 });
+
 
 // 4️⃣ Detalle de un servicio por ID (público)
 router.get('/:id', async (req, res) => {
@@ -117,5 +119,28 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Error al eliminar servicio' });
   }
 });
+
+// routes/servicios.js
+
+// PATCH /servicios/:id/publicar
+router.patch('/:id/publicar', authMiddleware, async (req, res) => {
+  try {
+    const servicio = await Servicio.findById(req.params.id);
+
+    if (!servicio) return res.status(404).json({ msg: 'Servicio no encontrado' });
+
+    // Validar que sea el dueño del servicio
+    if (servicio.entrenador.toString() !== req.user.id)
+      return res.status(403).json({ msg: 'No autorizado' });
+
+    servicio.publicado = !servicio.publicado; // alternar estado
+    await servicio.save();
+
+    res.json({ msg: `Servicio ${servicio.publicado ? 'publicado' : 'despublicado'}` });
+  } catch (err) {
+    res.status(500).json({ msg: 'Error del servidor' });
+  }
+});
+
 
 module.exports = router;
