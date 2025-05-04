@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const reserve = require('../models/reserva');
+const reserve = require('../models/reserve');
 const Service = require('../models/Service');
 
 // Crear una reserve (solo clientes)
