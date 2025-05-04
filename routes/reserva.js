@@ -51,4 +51,32 @@ router.get('/mis-servicios', authMiddleware, async (req, res) => {
   }
 });
 
+
+// backend/routes/reserva.js
+router.patch('/:id/estado', authMiddleware, async (req, res) => {
+  const { estado } = req.body;
+  const estadosValidos = ['Pendiente', 'Aceptado', 'Completado', 'Cancelado'];
+
+  if (!estadosValidos.includes(estado)) {
+    return res.status(400).json({ msg: 'Estado inválido' });
+  }
+
+  try {
+    const reserva = await Reserva.findById(req.params.id).populate('servicio');
+    if (!reserva) return res.status(404).json({ msg: 'Reserva no encontrada' });
+
+    // Solo el entrenador dueño del servicio puede cambiar el estado
+    if (reserva.servicio.entrenador.toString() !== req.user.userId) {
+      return res.status(403).json({ msg: 'No autorizado' });
+    }
+
+    reserva.estado = estado;
+    await reserva.save();
+    res.json({ msg: `Estado de la reserva actualizado a ${estado}` });
+  } catch (err) {
+    res.status(500).json({ msg: 'Error del servidor' });
+  }
+});
+
+
 module.exports = router;
