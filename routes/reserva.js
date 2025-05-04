@@ -29,7 +29,7 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 // Ver reservas de un entrenador (ver quién contrató sus servicios)
-router.get('/mis-servicios', authMiddleware, async (req, res) => {
+router.get('/mis-reservas', authMiddleware, async (req, res) => {
   if (req.user.role !== 'entrenador') {
     return res.status(403).json({ error: 'Solo los entrenadores pueden ver esto' });
   }
