@@ -70,9 +70,8 @@ router.post('/crear', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/entrenadores
 
-
+// GET /api/entrenadores -> Listar entrenadores por filtros 
 router.get('/entrenadores', async (req, res) => {
   try {
     const {
@@ -88,6 +87,7 @@ router.get('/entrenadores', async (req, res) => {
 
     // Paso 1: Filtro de servicios (si hay filtros de servicio)
     const servicioFiltro = {
+      publicado : true,
       ...(categoria && { categoria }),
       ...(presencial !== undefined && { presencial: presencial === 'true' }),
       ...(precioMin && { precio: { $gte: parseFloat(precioMin) } }),
