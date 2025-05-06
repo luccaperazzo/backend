@@ -138,18 +138,44 @@ router.get('/entrenadores', async (req, res) => {
 });
 
 
-
-
-
-// 3️⃣ Listar todos los servicios (público)
-router.get('/', async (req, res) => {
+// Obtener los servicios publicados de un entrenador por ID 
+router.get('/entrenador/:id', async (req, res) => {
   try {
-    const servicios = await Service.find({ publicado: true }).populate('entrenador');
-    res.json(servicios);
+    const { id } = req.params;
+
+    const servicios = await Service.find({
+      entrenador: id,
+      publicado: true
+    });
+
+    res.json({ servicios });
   } catch (err) {
-    res.status(500).json({ msg: 'Error al traer los servicios' });
+    console.error('❌ Error al obtener servicios:', err);
+    res.status(500).json({ error: 'Error al obtener servicios del entrenador' });
   }
 });
+
+
+
+
+// 3️⃣ Listar todos los servicios de un trainer (solo trainer)
+router.get('/mis', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'entrenador') {
+      return res.status(403).json({ error: 'Solo los entrenadores pueden ver sus servicios.' });
+    }
+
+    const servicios = await Service.find({
+      entrenador: req.user.userId
+    });
+
+    res.json(servicios);
+  } catch (err) {
+    console.error('❌ Error al obtener servicios del entrenador:', err);
+    res.status(500).json({ msg: 'Error al traer tus servicios' });
+  }
+});
+
 
 // 4️⃣ Detalle de un servicio por ID (público)
 router.get('/:id', async (req, res) => {

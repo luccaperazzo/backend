@@ -15,41 +15,49 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email ya registrado' });
     }
 
-    // Crear el objeto de usuario
-    const userData = { 
-      nombre, 
-      apellido, 
-      email, 
-      password, 
-      fechaNacimiento, 
-      role 
+    // Validar la fortaleza de la contraseña
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ 
+        error: 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula, un número y un carácter especial.'
+      });
+    }
+
+    // Armar objeto de usuario
+    const userData = {
+      nombre,
+      apellido,
+      email,
+      password,
+      fechaNacimiento,
+      role
     };
 
-    // Si es un 'entrenador', agregar los campos adicionales
+    // Si es entrenador, agregar zona e idiomas
     if (role === 'entrenador') {
       userData.zona = zona;
       userData.idiomas = idiomas;
     }
 
-    // Crear usuario
+    // Crear y guardar el usuario
     const user = new User(userData);
     await user.save();
 
-    // Generar token JWT
+    // Generar JWT
     const token = jwt.sign(
-      { user: { id: user._id, role: user.role } },  // Incluir id y role del usuario en el payload
-      process.env.JWT_SECRET,                      // Clave secreta
-      { expiresIn: '1h' }                         // Expira en 1 hora
+      { user: { id: user._id, role: user.role } },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
     );
 
-    // Respuesta con datos del usuario y token (sin password)
+    // Devolver usuario (sin password) + token
     res.status(201).json({
       user: {
+        _id: user._id,
         nombre: user.nombre,
         apellido: user.apellido,
         email: user.email,
         role: user.role,
-        _id: user._id,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       },
@@ -64,7 +72,6 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Error al crear usuario' });
   }
 });
-
 
 // Login
 router.post('/login', async (req, res) => {
