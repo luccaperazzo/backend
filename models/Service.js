@@ -9,7 +9,9 @@ const serviceSchema = new mongoose.Schema({
   duracion:    { type: Number, required: true },        // <-- en minutos
   fechaCreacion:{ type: Date, default: Date.now },
   publicado:   { type: Boolean, default: true },
-  presencial: { type: Boolean, required: true}  // Si el servicio es presencial o no
+  presencial: { type: Boolean, required: true},
+  disponibilidad : {type: Map, of : [[String]], default: {}
+} 
 }, { timestamps: true });
 
 module.exports = mongoose.model('Service', serviceSchema);

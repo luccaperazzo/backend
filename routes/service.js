@@ -4,6 +4,20 @@ const router = express.Router();
 const Service = require('../models/Service');
 const authMiddleware = require('../middleware/authMiddleware');
 const User = require('../models/User');
+const diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+
+// 🔸 Joi Schema
+const disponibilidadSchema = Joi.object().pattern(
+  Joi.string().valid(...diasValidos),
+  Joi.array().items(
+    Joi.array().ordered(
+      Joi.string().pattern(horaRegex).required(),
+      Joi.string().pattern(horaRegex).required()
+    ).length(2)
+  )
+);
 
 // Esquema de validación para crear/actualizar un servicio
 const serviceSchema = Joi.object({
@@ -35,37 +49,72 @@ const serviceSchema = Joi.object({
   presencial: Joi.boolean().required().messages({
     'boolean.base': 'El campo presencial debe ser verdadero o falso',
     'any.required': 'Debe indicarse si el servicio es presencial o no'
-  })
-  
+  }),
+  disponibilidad: disponibilidadSchema.required()
 });
+
+
+// 🔸 Utilidades para comparar horarios
+function horaToMinutos(hora) {
+  const [h, m] = hora.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function rangosSolapan(inicio1, fin1, inicio2, fin2) {
+  return horaToMinutos(inicio1) < horaToMinutos(fin2) &&
+         horaToMinutos(fin1) > horaToMinutos(inicio2);
+}
 
 // 1️⃣ Crear un nuevo servicio (solo entrenadores)
 router.post('/crear', authMiddleware, async (req, res) => {
   if (req.user.role !== 'entrenador') {
-    return res.status(403).json({ error: 'No autorizado. Solo entrenadores pueden crear servicios.' });
+    return res.status(403).json({ error: 'Solo los entrenadores pueden crear servicios.' });
   }
 
-  // Validación con Joi
   const { error, value } = serviceSchema.validate(req.body);
   if (error) {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { titulo, descripcion, precio, categoria, duracion, presencial } = value;
+  const { titulo, descripcion, precio, categoria, duracion, presencial, disponibilidad } = value;
 
   try {
+    // Verificar solapamiento con otros servicios del mismo entrenador
+    const otrosServicios = await Service.find({ entrenador: req.user.userId });
+
+    for (const otro of otrosServicios) {
+      for (const [dia, bloquesNuevo] of Object.entries(disponibilidad)) {
+        const bloquesExistentes = otro.disponibilidad?.get(dia) || [];
+
+        for (const [nuevoInicio, nuevoFin] of bloquesNuevo) {
+          for (const [existenteInicio, existenteFin] of bloquesExistentes) {
+            if (rangosSolapan(nuevoInicio, nuevoFin, existenteInicio, existenteFin)) {
+              return res.status(400).json({
+                error: `Conflicto: Ya tenés un servicio el ${dia} entre ${existenteInicio} y ${existenteFin}`
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Crear servicio
     const newService = new Service({
       titulo,
       descripcion,
       precio,
       categoria,
-      duracion,           // <-- guardamos duración definida por entrenador
-      entrenador: req.user.userId,
-      presencial
+      duracion,
+      presencial,
+      disponibilidad,
+      entrenador: req.user.userId
     });
+
     await newService.save();
     res.status(201).json(newService);
+
   } catch (err) {
+    console.error('❌ Error al crear servicio:', err);
     res.status(500).json({ error: 'Error al crear el servicio.' });
   }
 });

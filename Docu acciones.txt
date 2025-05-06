@@ -82,12 +82,21 @@ Aquí tienes un resumen de **todas las acciones** que tenés que probar en Postm
 * **Body (JSON)**
 
   ```json
-  {
-    "titulo": "Entrenamiento personalizado",
-    "descripcion": "Sesión de fitness a medida",
-    "precio": 300,
-    "categoria": "Entrenamiento"
+{
+  "titulo": "Entrenamiento personal uno a uno",
+  "descripcion": "Sesión adaptada al nivel y objetivos del cliente.",
+  "precio": 18000,
+  "categoria": "Entrenamiento",
+  "duracion": 60,
+  "presencial": true,
+  "disponibilidad": {
+    "Lunes": ["08:00", "18:00"],
+    "Martes": ["09:00"],
+    "Jueves": ["10:00", "14:00"],
+    "Viernes": ["11:00"]
   }
+}
+
   ```
 
 ### 3.2 Listar todos los servicios
