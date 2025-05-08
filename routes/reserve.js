@@ -52,7 +52,7 @@ router.get('/mis-reservas', authMiddleware, async (req, res) => {
 });
 
 // 3) Cambiar estado vía acción
-// PATCH /reserva/:id/estado
+// PATCH /reserve/:id/estado
 // Body: { action: 'Confirmar'|'Cancelar'|'Reprogramar', fechareserva? }
 router.patch('/:id/estado', authMiddleware, async (req, res) => {
   const { action, fechareserva } = req.body;
