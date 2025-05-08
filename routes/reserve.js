@@ -11,14 +11,15 @@ router.post('/', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Solo los clientes pueden contratar servicios' });
   }
 
-  const { servicioId } = req.body;
+  const { servicioId, fechaInicio } = req.body;
   try {
     const servicio = await Service.findById(servicioId);
     if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
     const nueva = new Reserva({
       cliente: req.user.userId,
-      servicio: servicioId
+      servicio: servicioId,
+      fechaInicio: fechaInicio // Hora de inicio de la reserva (en formato ISO)
     });
 
     await nueva.save();
