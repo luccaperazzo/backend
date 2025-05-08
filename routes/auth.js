@@ -97,7 +97,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-
+///CAMBIO CONTRASEÑA
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });

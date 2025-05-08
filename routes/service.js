@@ -1,4 +1,9 @@
 const Joi = require('joi');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const duration = require('dayjs/plugin/duration'); // Importa el plugin de duración
+dayjs.extend(duration); // Extiende dayjs con el plugin de duraciónconst express = require('express');
+dayjs.extend(utc);
 const express = require('express');
 const router = express.Router();
 const Service = require('../models/Service');
@@ -6,6 +11,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const User = require('../models/User');
 const diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+const Reserva = require('../models/Reserva');  // Asegúrate de que la ruta sea correcta
 
 
 // 🔸 Joi Schema
@@ -289,6 +295,98 @@ router.patch('/:id/publicar', authMiddleware, async (req, res) => {
     res.json({ msg: `Servicio ${servicio.publicado ? 'publicado' : 'despublicado'}` });
   } catch (err) {
     res.status(500).json({ msg: 'Error del servidor' });
+  }
+});
+
+
+// Mapeo de días de la semana de inglés a español
+const traduccionDias = {
+  'Monday': 'Lunes',
+  'Tuesday': 'Martes',
+  'Wednesday': 'Miércoles',
+  'Thursday': 'Jueves',
+  'Friday': 'Viernes',
+  'Saturday': 'Sábado',
+  'Sunday': 'Domingo'
+};
+
+// Función para generar bloques horarios
+function generarBloques(inicio, fin, duracionMin) {
+  const formato = 'HH:mm';
+  const bloques = [];
+  
+  let actual = dayjs(`2025-01-01T${inicio}`);
+  const final = dayjs(`2025-01-01T${fin}`);
+  
+  const duracion = dayjs.duration(duracionMin, 'minutes'); // Duración de los bloques
+
+  // Generamos bloques de tiempo mientras 'actual' no pase del 'final'
+  while (actual.add(duracion).isBefore(final) || actual.isSame(final)) {
+    bloques.push(actual.format(formato));  // Agrega el bloque de horario formateado
+    
+    // Avanza a la siguiente hora
+    actual = actual.add(duracion);
+  }
+
+  // No agregamos el último bloque si es igual a la hora final
+  if (actual.format(formato) !== final.format(formato)) {
+    bloques.push(actual.format(formato));
+  }
+
+  return bloques;
+}
+
+// Ruta para obtener disponibilidad real
+router.get('/:id/disponibilidad-real', async (req, res) => {
+  try {
+    const { fecha } = req.query;
+    console.log("Fecha recibida:", fecha);  // Verifica la fecha recibida
+
+    const servicio = await Service.findById(req.params.id);
+    if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
+
+    // Obtener el nombre del día en español
+    const diaSemana = dayjs(fecha).format('dddd'); // Día en inglés
+    const nombreDia = traduccionDias[diaSemana];  // Traducción al español
+
+    console.log("Día formateado:", nombreDia);
+    console.log("Disponibilidad del servicio:", servicio.disponibilidad);
+
+    // Obtener las franjas de ese día
+    const franjas = servicio.disponibilidad.get(nombreDia); 
+    console.log("Franjas para el día:", franjas);
+
+    if (!franjas || franjas.length === 0) return res.json([]);
+
+    let bloquesTotales = [];
+    for (let [inicio, fin] of franjas) {
+      bloquesTotales.push(...generarBloques(inicio, fin, servicio.duracion));
+    }
+
+    console.log("Bloques totales generados:", bloquesTotales);
+
+    // Obtener las reservas para el servicio en la fecha solicitada
+    const reservas = await Reserva.find({
+      servicio: servicio._id,
+      fechaInicio: { 
+        $gte: dayjs(`${fecha}T00:00:00.000Z`).utc().toDate(), 
+        $lt: dayjs(`${fecha}T23:59:59.999Z`).utc().toDate()
+      },
+      estado: { $nin: ['Cancelado', 'Finalizado'] }  // Excluir reservas con estado "Cancelado" o "Finalizado"
+    });
+
+    // Obtener las horas de inicio de las reservas (solo la hora)
+    const horariosReservados = reservas.map(r => dayjs(r.fechaInicio).utc().format('HH:mm'));
+    console.log("Horarios reservados:", horariosReservados);
+
+    // Filtrar los bloques disponibles, excluyendo los reservados
+    const disponibles = bloquesTotales.filter(bloque => !horariosReservados.includes(bloque));
+    console.log("Bloques disponibles después de filtrar:", disponibles);
+
+    res.json(disponibles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener disponibilidad real.' });
   }
 });
 
