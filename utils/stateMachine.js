@@ -5,6 +5,7 @@ const transitions = {
       Reprogramar: { to: 'Pendiente', role: 'cliente' },
     },
     Aceptado: {
+      Cancelar:    { to: 'Cancelado', role: 'cliente' },
       // Completado será automático al vencerse la clase
     },
     Completado: {
