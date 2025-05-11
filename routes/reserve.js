@@ -1,3 +1,4 @@
+// backend/routes/reserve.js
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
@@ -5,100 +6,102 @@ const Reserva = require('../models/Reserva');
 const Service = require('../models/Service');
 const { canTransition, nextState } = require('../utils/stateMachine');
 
-// 1) Crear una reserva (solo clientes)
+// POST  /api/reserve
+// Crear una nueva reserva (solo clientes)
 router.post('/', authMiddleware, async (req, res) => {
-  if (req.user.role !== 'cliente') {
-    return res.status(403).json({ error: 'Solo los clientes pueden contratar servicios' });
-  }
+  if (req.user.role !== 'cliente')
+    return res.status(403).json({ error: 'Solo clientes pueden reservar servicios' });
 
   const { servicioId, fechaInicio } = req.body;
+  if (!servicioId || !fechaInicio)
+    return res.status(400).json({ error: 'servicioId y fechaInicio son obligatorios' });
+
   try {
     const servicio = await Service.findById(servicioId);
     if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
-    const nueva = new Reserva({
+    const reserva = await Reserva.create({
       cliente: req.user.userId,
       servicio: servicioId,
-      fechaInicio: fechaInicio // Hora de inicio de la reserva (en formato ISO)
+      fechaInicio: new Date(fechaInicio)
     });
 
-    await nueva.save();
-    res.status(201).json(nueva);
+    res.status(201).json(reserva);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error al crear la reserva' });
   }
 });
 
-// 2) Ver reservas de un entrenador (ver quién contrató sus servicios)
-router.get('/mis-reservas', authMiddleware, async (req, res) => {
-  if (req.user.role !== 'entrenador') {
-    return res.status(403).json({ error: 'Solo los entrenadores pueden ver esto' });
-  }
-
+// GET /api/reserve
+// Listar reservas: clientes ven las suyas; entrenadores ven reservas de sus servicios
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const reservas = await Reserva.find()
-      .populate({
-        path: 'servicio',
-        match: { entrenador: req.user.userId },
-        populate: { path: 'entrenador', select: 'nombre apellido' }
-      })
-      .populate('cliente', 'nombre apellido email');
-
-    const filtradas = reservas.filter(r => r.servicio !== null);
-    res.json(filtradas);
+    let reservas;
+    if (req.user.role === 'cliente') {
+      reservas = await Reserva.find({ cliente: req.user.userId })
+        .populate('servicio', 'titulo duracion')
+        .sort({ fechaInicio: -1 });
+    } else if (req.user.role === 'entrenador') {
+      reservas = await Reserva.find()
+        .populate({
+          path: 'servicio',
+          match: { entrenador: req.user.userId },
+          select: 'titulo duracion'
+        })
+        .populate('cliente', 'nombre apellido email')
+        .sort({ fechaInicio: -1 });
+      reservas = reservas.filter(r => r.servicio);
+    } else {
+      return res.status(403).json({ error: 'Rol no autorizado' });
+    }
+    res.json(reservas);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error al obtener reservas' });
   }
 });
 
-// 3) Cambiar estado vía acción
-// PATCH /reserve/:id/estado
-// Body: { action: 'Confirmar'|'Cancelar'|'Reprogramar', fechareserva? }
+// PATCH /api/reserve/:id/estado
+// Cambiar estado: Confirmar, Cancelar, Reprogramar
 router.patch('/:id/estado', authMiddleware, async (req, res) => {
-  const { action, fechareserva } = req.body;
+  const { action, fechaInicio } = req.body;
+  if (!action)
+    return res.status(400).json({ error: 'action es obligatorio' });
 
   try {
-    const r = await Reserva.findById(req.params.id).populate('servicio');
-    if (!r) return res.status(404).json({ error: 'Reserva no encontrada' });
+    const reserva = await Reserva.findById(req.params.id);
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
 
-    if (!canTransition(req.user.role, r.estado, action)) {
-      return res.status(403).json({ error: 'No autorizado o acción inválida' });
-    }
+    // Verificar permiso y transición válida
+    if (!canTransition(req.user.role, reserva.estado, action))
+      return res.status(403).json({ error: 'Acción no permitida' });
 
-    r.estado = nextState(r.estado, action);
+    // Construir actualización
+    let update = { estado: nextState(reserva.estado, action) };
 
+    // Reprogramar: actualizar fechaInicio
     if (action === 'Reprogramar') {
-      if (!fechareserva) {
-        return res.status(400).json({ error: 'Fecha de reprogramación obligatoria' });
-      }
-      r.fechareserva = new Date(fechareserva);
+      if (!fechaInicio)
+        return res.status(400).json({ error: 'fechaInicio es obligatorio para reprogramar' });
+      update.fechaInicio = new Date(fechaInicio);
     }
 
-    await r.save();
-    res.json(r);
-  } catch (err) {
-    res.status(500).json({ error: 'Error del servidor' });
-  }
-});
+    // Ejecutar actualización atómica
+    await Reserva.updateOne(
+      { _id: reserva._id, estado: reserva.estado },
+      { $set: update }
+    );
 
-// 4) Comentar en reserva completada
-// POST /reserva/:id/comentar
-// Body: { texto }
-router.post('/:id/comentar', authMiddleware, async (req, res) => {
-  const { texto } = req.body;
-  try {
-    const r = await Reserva.findById(req.params.id);
-    if (!r) return res.status(404).json({ error: 'Reserva no encontrada' });
-    if (r.estado !== 'Completado') {
-      return res.status(400).json({ error: 'Solo se puede comentar si está Completada' });
-    }
-
-    r.comentarios.push({ autor: req.user.userId, texto });
-    await r.save();
-    res.json(r);
+    const updated = await Reserva.findById(reserva._id)
+      .populate('servicio', 'titulo duracion')
+      .populate('cliente', 'nombre apellido email');
+    res.json(updated);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error del servidor' });
   }
 });
 
 module.exports = router;
+

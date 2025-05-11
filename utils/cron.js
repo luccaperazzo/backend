@@ -1,20 +1,33 @@
-const cron    = require('node-cron');
-const Reserva = require('../models/Reserva');
-const Service = require('../models/Service');
+// backend/utils/cron.js
+const cron        = require('node-cron');
+const Reserva     = require('../models/Reserva');
+const { SYSTEM_ROLE, nextState } = require('./stateMachine');
 
 cron.schedule('* * * * *', async () => {
   try {
-    const ahora = new Date();
+    const ahora = Date.now();
 
-    // Carga reservas Aceptadas junto con su servicio
+    // Solo reservas en Aceptado
     const aceptadas = await Reserva.find({ estado: 'Aceptado' }).populate('servicio');
 
     for (const r of aceptadas) {
-      const dur = r.servicio.duracion * 60000; // milisegundos
-      if (r.fechareserva.getTime() + dur <= ahora.getTime()) {
-        r.estado = 'Completado';
-        await r.save();
-        console.log(`Reserva ${r._id} marcada como Completado`);
+      if (!r.fechaInicio) {
+        console.warn(`Reserva ${r._id} sin fechaInicio → omitida`);
+        continue;
+      }
+      // calculamos fin = inicio + duracion (minutos → ms)
+      const finServicio = r.fechaInicio.getTime() + (r.servicio.duracion * 60_000);
+
+      if (finServicio <= ahora) {
+        // aplicamos la transición automática
+        const nuevoEstado = nextState(r.estado, 'AutoFinalizar');
+        if (nuevoEstado) {
+          await Reserva.updateOne(
+            { _id: r._id, estado: r.estado },
+            { $set: { estado: nuevoEstado } }
+          );
+          console.log(`Reserva ${r._id} → ${nuevoEstado}`);
+        }
       }
     }
   } catch (err) {
