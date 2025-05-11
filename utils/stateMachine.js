@@ -1,4 +1,3 @@
-// backend/utils/stateMachine.js
 const SYSTEM_ROLE = 'system';
 
 const transitions = Object.freeze({

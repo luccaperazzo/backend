@@ -62,9 +62,9 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// PATCH /api/reserve/:id/estado
-// Cambiar estado: Confirmar, Cancelar, Reprogramar
-router.patch('/:id/estado', authMiddleware, async (req, res) => {
+// PATCH /api/reserve/:id/state
+// Cambiar state: Confirmar, Cancelar, Reprogramar
+router.patch('/:id/state', authMiddleware, async (req, res) => {
   let { action, fechaInicio } = req.body;
   if (!action)
     return res.status(400).json({ error: 'action es obligatorio' });
@@ -76,10 +76,10 @@ router.patch('/:id/estado', authMiddleware, async (req, res) => {
     const reserva = await Reserva.findById(req.params.id);
     if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
 
-    if (!canTransition(req.user.role, reserva.estado, action))
+    if (!canTransition(req.user.role, reserva.state, action))
       return res.status(403).json({ error: 'Acción no permitida' });
 
-    const update = { estado: nextState(reserva.estado, action) };
+    const update = { state: nextState(reserva.state, action) };
     if (action === 'Reprogramar') {
       if (!fechaInicio)
         return res.status(400).json({ error: 'fechaInicio es obligatorio para reprogramar' });
@@ -87,7 +87,7 @@ router.patch('/:id/estado', authMiddleware, async (req, res) => {
     }
 
     await Reserva.updateOne(
-      { _id: reserva._id, estado: reserva.estado },
+      { _id: reserva._id, state: reserva.state },
       { $set: update }
     );
 
@@ -97,7 +97,7 @@ router.patch('/:id/estado', authMiddleware, async (req, res) => {
     res.json(updated);
 
   } catch (err) {
-    console.error('❌ ERROR /reserve/:id/estado:', err.message);
+    console.error('❌ ERROR /reserve/:id/state:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
