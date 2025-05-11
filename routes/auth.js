@@ -3,6 +3,7 @@ const router = express.Router();
 const sendEmail = require('../utils/sendEmail');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken'); // Asegúrate de tener instalado jwt (npm install jsonwebtoken)
+const bcrypt = require('bcryptjs');
 
 // Registro de usuario
 router.post('/register', async (req, res) => {
@@ -110,7 +111,7 @@ router.post('/forgot-password', async (req, res) => {
   await user.save();
 
   // Link de recuperación (ajustá tu dominio/frontend)
-  const resetLink = `https://tu-frontend.com/reset-password?token=${token}`;
+  const resetLink = `http://localhost:3000/reset-password?token=${token}`;
 
   // Enviar email usando SendGrid
   await sendEmail(
@@ -123,6 +124,37 @@ router.post('/forgot-password', async (req, res) => {
   res.json({ message: 'Email de recuperación enviado. Revisá tu bandeja.' });
 });
 
+
+router.post('/reset-password', async (req, res) => {
+  const { token, password, confirmPassword } = req.body;
+
+  // Verificar que las contraseñas coincidan
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: 'Las contraseñas no coinciden' });
+  }
+
+  // Buscar al usuario por el token y verificar si el token no ha expirado
+  const user = await User.findOne({
+    resetToken: token,
+    resetTokenExpires: { $gt: Date.now() },  // Verificar si el token no ha expirado
+  });
+
+  if (!user) {
+    return res.status(400).json({ message: 'Token inválido o expirado' });
+  }
+
+  // Encriptar la nueva contraseña
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Actualizar la contraseña y eliminar el token
+  user.password = hashedPassword;
+  user.resetToken = undefined;
+  user.resetTokenExpires = undefined;
+
+  await user.save();
+
+  res.json({ message: 'Contraseña actualizada con éxito' });
+});
 module.exports = router;
 
 
