@@ -1,13 +1,47 @@
-// backend/models/User.js
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const bcrypt   = require('bcryptjs');
+
+const comentarioSchema = new mongoose.Schema({
+  cliente: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  texto: {
+    type: String,
+    required: true,
+    maxlength: 500
+  },
+  fecha: {
+    type: Date,
+    default: Date.now
+  },
+  respuestas: [
+    {
+      entrenador: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      },
+      texto: {
+        type: String,
+        required: true,
+        maxlength: 500
+      },
+      fecha: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ]
+});
 
 const userSchema = new mongoose.Schema({
   nombre:          { type: String, required: true },
   apellido:        { type: String, required: true },
   email:           { type: String, required: true, unique: true },
   password:        { type: String, required: true },
-  fechaNacimiento: { type: Date, required: true },
+  fechaNacimiento: { type: Date,   required: true },
   role:            { type: String, enum: ['cliente', 'entrenador'], default: 'cliente' },
 
   // Campos exclusivos para entrenadores:
@@ -20,12 +54,17 @@ const userSchema = new mongoose.Schema({
     required: function() { return this.role === 'entrenador'; },
     validate: {
       validator: function(arr) {
-        // Si no es entrenador, no valida la longitud
         if (this.role !== 'entrenador') return true;
-        return Array.isArray(arr) && arr.length > 0; // Si es entrenador, debe tener al menos un idioma
+        return Array.isArray(arr) && arr.length > 0;
       },
       message: 'Un entrenador debe indicar al menos un idioma.'
     }
+  },
+
+  // Comentarios y respuestas (solo se usa cuando role==='entrenador')
+  comentarios: {
+    type: [comentarioSchema],
+    default: []
   }
 
 }, { timestamps: true });
