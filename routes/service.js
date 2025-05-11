@@ -9,7 +9,7 @@ const router = express.Router();
 const Service = require('../models/Service');
 const authMiddleware = require('../middleware/authMiddleware');
 const User = require('../models/User');
-const diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 const Reserva = require('../models/Reserva');  // Asegúrate de que la ruta sea correcta
 

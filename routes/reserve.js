@@ -65,43 +65,43 @@ router.get('/', authMiddleware, async (req, res) => {
 // PATCH /api/reserve/:id/estado
 // Cambiar estado: Confirmar, Cancelar, Reprogramar
 router.patch('/:id/estado', authMiddleware, async (req, res) => {
-  const { action, fechaInicio } = req.body;
+  let { action, fechaInicio } = req.body;
   if (!action)
     return res.status(400).json({ error: 'action es obligatorio' });
+
+  // Normalizamos: primera letra mayúscula, resto minúsculas
+  action = action.charAt(0).toUpperCase() + action.slice(1).toLowerCase();
 
   try {
     const reserva = await Reserva.findById(req.params.id);
     if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
 
-    // Verificar permiso y transición válida
     if (!canTransition(req.user.role, reserva.estado, action))
       return res.status(403).json({ error: 'Acción no permitida' });
 
-    // Construir actualización
-    let update = { estado: nextState(reserva.estado, action) };
-
-    // Reprogramar: actualizar fechaInicio
+    const update = { estado: nextState(reserva.estado, action) };
     if (action === 'Reprogramar') {
       if (!fechaInicio)
         return res.status(400).json({ error: 'fechaInicio es obligatorio para reprogramar' });
       update.fechaInicio = new Date(fechaInicio);
     }
 
-    // Ejecutar actualización atómica
     await Reserva.updateOne(
       { _id: reserva._id, estado: reserva.estado },
       { $set: update }
     );
 
     const updated = await Reserva.findById(reserva._id)
-      .populate('servicio', 'titulo duracion')
-      .populate('cliente', 'nombre apellido email');
+      .populate('servicio','titulo duracion')
+      .populate('cliente','nombre apellido email');
     res.json(updated);
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error del servidor' });
+    console.error('❌ ERROR /reserve/:id/estado:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
+
 
 module.exports = router;
 
