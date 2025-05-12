@@ -85,7 +85,29 @@ router.post('/crear', authMiddleware, async (req, res) => {
   const { titulo, descripcion, precio, categoria, duracion, presencial, disponibilidad } = value;
 
   try {
-    // Verificar solapamiento con otros servicios del mismo entrenador
+    // 0️⃣ Validar que cada bloque cumpla la duración
+    for (const [dia, bloques] of Object.entries(disponibilidad)) {
+      for (const [inicio, fin] of bloques) {
+        const [h1, m1] = inicio.split(':').map(Number);
+        const [h2, m2] = fin.split(':').map(Number);
+        const minutosInicio = h1 * 60 + m1;
+        const minutosFin    = h2 * 60 + m2;
+        const diff = minutosFin - minutosInicio;
+
+        if (diff < duracion) {
+          return res.status(400).json({
+            error: `El bloque en ${dia} de ${inicio} a ${fin} dura ${diff} min, menor a la duración del servicio (${duracion} min).`
+          });
+        }
+        if (diff % duracion !== 0) {
+          return res.status(400).json({
+            error: `El bloque en ${dia} de ${inicio} a ${fin} no es múltiplo exacto de ${duracion} min (sobran ${diff % duracion} min).`
+          });
+        }
+      }
+    }
+
+    // 1️⃣ Verificar solapamiento con otros servicios del mismo entrenador
     const otrosServicios = await Service.find({ entrenador: req.user.userId });
 
     for (const otro of otrosServicios) {
@@ -104,7 +126,7 @@ router.post('/crear', authMiddleware, async (req, res) => {
       }
     }
 
-    // Crear servicio
+    // 2️⃣ Crear servicio
     const newService = new Service({
       titulo,
       descripcion,
@@ -124,6 +146,7 @@ router.post('/crear', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Error al crear el servicio.' });
   }
 });
+
 
 
 // GET /api/entrenadores -> Listar entrenadores por filtros 
