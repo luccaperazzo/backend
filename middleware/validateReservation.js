@@ -5,7 +5,7 @@ const Service = require('../models/Service'); // Asumo que existe y tiene campo 
 const validateReservation = async (req, res, next) => {
   try {
     // 1. Obtener IDs necesarios
-    const clienteId = req.user.id;
+    const clienteId = req.user.userId; // Asumiendo que el ID del cliente está en req.user después de la autenticación
     const entrenadorId = req.params.id;
 
     // 2. Buscar servicios del entrenador
@@ -17,7 +17,9 @@ const validateReservation = async (req, res, next) => {
       servicio: { $in: serviciosEntrenador.map(s => s._id) },
       estado: 'Finalizado'
     });
-
+    console.log(reservaFinalizada);
+    console.log(reservaFinalizada);
+    console.log(reservaFinalizada);
     if (!reservaFinalizada) {
       return res.status(403).json({
         error: 'Debes tener una reserva finalizada con este entrenador para comentar'

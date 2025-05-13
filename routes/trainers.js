@@ -43,7 +43,7 @@ router.post('/:id/comments', authMiddleware, validateReservation, async (req, re
     if (!entrenador) return res.status(404).json({ error: 'Entrenador no encontrado' });
 
     entrenador.comentarios.push({
-      cliente: req.user.id,
+      cliente: req.user.userId,
       texto: req.body.texto.trim()
     });
 
