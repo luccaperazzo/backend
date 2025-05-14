@@ -72,7 +72,7 @@ function rangosSolapan(inicio1, fin1, inicio2, fin2) {
 }
 
 // 1️⃣ Crear un nuevo servicio (solo entrenadores)
-router.post('/crear', authMiddleware, async (req, res) => {
+router.post('/create', authMiddleware, async (req, res) => {
   if (req.user.role !== 'entrenador') {
     return res.status(403).json({ error: 'Solo los entrenadores pueden crear servicios.' });
   }
@@ -149,8 +149,8 @@ router.post('/crear', authMiddleware, async (req, res) => {
 
 
 
-// GET /api/entrenadores -> Listar entrenadores por filtros 
-router.get('/entrenadores', async (req, res) => {
+// GET /api/trainers -> Listar entrenadores por filtros 
+router.get('/trainers', async (req, res) => {
   try {
     const {
       categoria,
@@ -210,14 +210,14 @@ router.get('/entrenadores', async (req, res) => {
     // Paso 6: Devolver entrenadores
     res.json({ entrenadores });
   } catch (error) {
-    console.error('❌ Error en /entrenadores:', error);
+    console.error('❌ Error en /trainers:', error);
     res.status(500).json({ error: 'Error al obtener entrenadores' });
   }
 });
 
 
 // Obtener los servicios publicados de un entrenador por ID 
-router.get('/entrenador/:id', async (req, res) => {
+router.get('/trainer/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -237,7 +237,7 @@ router.get('/entrenador/:id', async (req, res) => {
 
 
 // 3️⃣ Listar todos los servicios de un trainer (solo trainer)
-router.get('/mis', authMiddleware, async (req, res) => {
+router.get('/my', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'entrenador') {
       return res.status(403).json({ error: 'Solo los entrenadores pueden ver sus servicios.' });
@@ -306,7 +306,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 // 7️⃣ Publicar/despublicar
-router.patch('/:id/publicar', authMiddleware, async (req, res) => {
+router.patch('/:id/publish', authMiddleware, async (req, res) => {
   try {
     const servicio = await Service.findById(req.params.id);
     if (!servicio) return res.status(404).json({ msg: 'Servicio no encontrado' });
@@ -360,7 +360,7 @@ function generarBloques(inicio, fin, duracionMin) {
 }
 
 // Ruta para obtener disponibilidad real
-router.get('/:id/disponibilidad-real', async (req, res) => {
+router.get('/:id/real-availability', async (req, res) => {
   try {
     const { fecha } = req.query;
     console.log("Fecha recibida:", fecha);  // Verifica la fecha recibida

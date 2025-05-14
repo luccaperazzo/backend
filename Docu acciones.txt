@@ -74,7 +74,7 @@ Aquí tienes un resumen de **todas las acciones** que tenés que probar en Postm
 
 ### 3.1 Crear un servicio
 
-* **POST** `http://localhost:3001/api/service/crear`
+* **POST** `http://localhost:3001/api/service/create`
 * **Headers**
 
   * `Content-Type: application/json`
@@ -168,7 +168,7 @@ Aquí tienes un resumen de **todas las acciones** que tenés que probar en Postm
 
 ### 4.2 Ver reservas de mis servicios (entrenador)
 
-* **GET** `http://localhost:3001/api/reserva/mis-servicios`
+* **GET** `http://localhost:3001/api/reserva/my`
 * **Headers**
 
   * `Authorization: Bearer <token_entrenador>`
