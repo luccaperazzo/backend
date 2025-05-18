@@ -1,6 +1,10 @@
 // middlewares/validateReservation.js
 const Reserva = require('../models/Reserva');
 const Service = require('../models/Service'); // Asumo que existe y tiene campo 'entrenador'
+const authMiddleware  = require('../middleware/authMiddleware');
+
+const Rating       = require('../models/Rating');
+const TrainerStats = require('../models/TrainerStats');
 
 const validateReservation = async (req, res, next) => {
   try {
