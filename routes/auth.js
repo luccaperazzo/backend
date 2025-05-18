@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 const sendEmail = require('../utils/sendEmail');
 const User = require('../models/User');
-const jwt = require('jsonwebtoken'); // Asegúrate de tener instalado jwt (npm install jsonwebtoken)
+const jwt = require('jsonwebtoken'); 
 const bcrypt = require('bcryptjs');
 
-// Registro de usuario
 router.post('/register', async (req, res) => {
   try {
     const { nombre, apellido, email, password, fechaNacimiento, role, zona, idiomas } = req.body;
@@ -74,7 +73,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -98,7 +96,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-///CAMBIO CONTRASEÑA
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
@@ -123,7 +120,6 @@ router.post('/forgot-password', async (req, res) => {
 
   res.json({ message: 'Email de recuperación enviado. Revisá tu bandeja.' });
 });
-
 
 router.post('/reset-password', async (req, res) => {
   const { token, password, confirmPassword } = req.body;
