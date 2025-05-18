@@ -134,63 +134,6 @@ router.get('/:id/stats', async (req, res) => {
   }
 });
 
-router.post(
-  '/:id/comment-answers',
-  authMiddleware,
-  async (req, res) => {
-    try {
-      const entrenadorId = req.params.id;
-      const entrenadorAuth = req.user.userId;       
-      const { commentId, texto } = req.body;
 
-      // 1) Validaciones básicas
-      if (entrenadorAuth !== entrenadorId) {
-        return res.status(403).json({ error: 'No puedes responder comentarios de otros entrenadores' });
-      }
-      if (!texto || typeof texto !== 'string' || !texto.trim() || texto.length > 500) {
-        return res.status(400).json({ error: 'Texto inválido (1-500 caracteres)' });
-      }
-      if (!commentId) {
-        return res.status(400).json({ error: 'Se requiere el commentId del comentario a responder' });
-      }
-
-      // 2) Cargar entrenador y asegurar que exista y sea role==='entrenador'
-      const entrenador = await User.findById(entrenadorId);
-      if (!entrenador || entrenador.role !== 'entrenador') {
-        return res.status(404).json({ error: 'Entrenador no encontrado' });
-      }
-
-      // 3) Buscar el comentario dentro del array
-      const comentario = entrenador.comentarios.id(commentId);
-      if (!comentario) {
-        return res.status(404).json({ error: 'Comentario no encontrado' });
-      }
-
-      // 4) Verificar que todavía no tenga respuesta
-      if (comentario.respuestas.length > 0) {
-        return res.status(400).json({ error: 'Ya has respondido a este comentario' });
-      }
-
-      // 5) Agregar la respuesta
-      comentario.respuestas.push({
-        entrenador: entrenadorId,
-        texto: texto.trim()
-      });
-
-      await entrenador.save();
-
-      // 6) Retornar OK con la respuesta añadida
-      const nuevaRespuesta = comentario.respuestas.slice(-1)[0];
-      res.status(201).json({
-        mensaje: 'Respuesta añadida',
-        respuesta: nuevaRespuesta
-      });
-
-    } catch (error) {
-      console.error('❌ Error POST /:id/comment-answers:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
-    }
-  }
-);
 
 module.exports = router;
