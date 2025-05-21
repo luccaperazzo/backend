@@ -96,7 +96,9 @@ router.get('/:id/reviews', async (req, res) => {
       cliente:   r.cliente,      // { _id, nombre, apellido, avatarUrl }
       texto:     r.texto,
       rating:    r.rating,
-      createdAt: r.createdAt
+      createdAt: r.createdAt,
+      reply:     r.reply      // puede ser null o { texto, createdAt }
+
     }));
 
     return res.json(output);
@@ -134,6 +136,48 @@ router.get('/:id/stats', async (req, res) => {
   }
 });
 
+// POST /api/trainers/:trainerId/reviews/:reviewId/reply
+router.post(
+  '/:trainerId/reviews/:reviewId/reply',
+  authMiddleware,
+  async (req, res) => {
+    const { trainerId, reviewId } = req.params;
+    const texto = req.body.texto?.trim();
+
+    // 1️⃣ Validar rol y propietario
+    if (req.user.role !== 'entrenador' || req.user.userId !== trainerId) {
+      return res.status(403).json({ error: 'Sólo el entrenador propietario puede responder.' });
+    }
+
+    // 2️⃣ Validar texto
+    if (!texto || texto.length === 0 || texto.length > 500) {
+      return res.status(400).json({ error: 'Texto inválido (1–500 caracteres).' });
+    }
+
+    // 3️⃣ Buscar el review
+    const review = await Rating.findOne({ 
+      _id: reviewId,
+      entrenador: trainerId
+    });
+    if (!review) {
+      return res.status(404).json({ error: 'Reseña no encontrada.' });
+    }
+
+    // 4️⃣ Verificar que no tenga ya respuesta
+    if (review.reply) {
+      return res.status(400).json({ error: 'Ya existe una respuesta para esta reseña.' });
+    }
+
+    // 5️⃣ Guardar respuesta
+    review.reply = { texto };
+    await review.save();
+
+    return res.status(201).json({
+      mensaje: 'Respuesta guardada',
+      reply:   review.reply
+    });
+  }
+);
 
 
 module.exports = router;
