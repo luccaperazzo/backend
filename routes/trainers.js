@@ -5,7 +5,9 @@ const authMiddleware = require('../middleware/authMiddleware');
 const validateReservation = require('../middleware/validateReservation');
 const Rating       = require('../models/Rating');
 const TrainerStats = require('../models/TrainerStats');
+const Reserva = require('../models/Reserva');
 
+/*
 // Obtener todos los entrenadores + filtro de zona e idioma
 router.get('/', async (req, res) => {
   try {
@@ -34,9 +36,77 @@ router.get('/', async (req, res) => {
   }
 });
 
+
+*/
+
+
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const clienteId = req.user.userId;
+
+    // 1. Buscar reservas relevantes
+    const reservas = await Reserva.find({
+      cliente: clienteId,
+      estado: { $in: ['Aceptado', 'Finalizado'] }
+    }).populate({
+      path: 'servicio',
+      select: 'entrenador',
+      populate: {
+        path: 'entrenador',
+        select: 'nombre apellido'
+      }
+    });
+
+    // 2. Extraer IDs únicos y datos básicos
+    const entrenadoresMap = new Map();
+
+    for (const reserva of reservas) {
+      const entrenador = reserva.servicio?.entrenador;
+      if (entrenador && !entrenadoresMap.has(String(entrenador._id))) {
+        entrenadoresMap.set(String(entrenador._id), {
+          _id: entrenador._id,
+          nombre: entrenador.nombre,
+          apellido: entrenador.apellido
+        });
+      }
+    }
+
+    // 3. Buscar stats en lote
+    const ids = Array.from(entrenadoresMap.keys());
+    const stats = await TrainerStats.find({ entrenador: { $in: ids } })
+      .select('entrenador avgRating').lean();
+
+    // 4. Unir nombre, apellido y avgRating
+    const entrenadores = ids.map(id => {
+      const base = entrenadoresMap.get(id);
+      const stat = stats.find(s => String(s.entrenador) === id);
+      return {
+        nombre: base.nombre,
+        apellido: base.apellido,
+        avgRating: stat ? stat.avgRating : 0
+      };
+    });
+
+    res.json(entrenadores);
+
+  } catch (err) {
+    console.error('❌ Error al traer entrenadores del cliente:', err);
+    res.status(500).json({ error: 'Error interno al buscar entrenadores' });
+  }
+});
+
+
+
+
+
+
+
+
+
+
 // Comentar a un entrenador. Validacion:Tiene que tener una reserva finalizada el cliente para comentar. 
 router.post(
-  '/:id/comments-rating',
+  '/:id/reviews',
   authMiddleware,
   validateReservation,
   async (req, res) => {
