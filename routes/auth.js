@@ -4,10 +4,16 @@ const sendEmail = require('../utils/sendEmail');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken'); 
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+
 
 router.post('/register', async (req, res) => {
   try {
-    const { nombre, apellido, email, password, fechaNacimiento, role, zona, idiomas } = req.body;
+    const { nombre, apellido, email, password, confirmPassword, fechaNacimiento, role, zona, idiomas,presentacion } = req.body;
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: 'Las contraseñas no coinciden.' });
+    }
 
     // Validar si el email ya existe
     const existingUser = await User.findOne({ email });
@@ -37,6 +43,7 @@ router.post('/register', async (req, res) => {
     if (role === 'entrenador') {
       userData.zona = zona;
       userData.idiomas = idiomas;
+      userData.presentacion = presentacion;
     }
 
     // Crear y guardar el usuario
@@ -81,15 +88,25 @@ router.post('/login', async (req, res) => {
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(400).json({ error: 'Credenciales inválidas' });
-
-    // Generar token
+    console.log(isMatch)    // Generar token
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '10d' }
     );
 
-    res.json({ token });
+  res.json({ 
+    token,
+    role: user.role, // 👈 agrega esto
+    user: {
+      _id: user._id,
+      nombre: user.nombre,
+      apellido: user.apellido,
+      email: user.email,
+      role: user.role,
+      // podés agregar lo que quieras, pero mínimo el role
+    }
+  });
   } catch (err) {
     console.error('❌ Error en login:', err);
     res.status(500).json({ error: 'Error en login' });
@@ -104,7 +121,7 @@ router.post('/forgot-password', async (req, res) => {
   // Generar token y expiración
   const token = crypto.randomBytes(32).toString('hex');
   user.resetToken = token;
-  user.resetTokenExpires = Date.now() + 15 * 60 * 1000; // 15 min
+  user.resetTokenExpires = Date.now() + 15 * 60 * 1000; // 15 minutos
   await user.save();
 
   // Link de recuperación (ajustá tu dominio/frontend)
@@ -140,10 +157,9 @@ router.post('/reset-password', async (req, res) => {
   }
 
   // Encriptar la nueva contraseña
-  const hashedPassword = await bcrypt.hash(password, 10);
 
   // Actualizar la contraseña y eliminar el token
-  user.password = hashedPassword;
+  user.password = password;
   user.resetToken = undefined;
   user.resetTokenExpires = undefined;
 
