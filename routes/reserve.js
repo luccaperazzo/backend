@@ -64,41 +64,46 @@ router.get('/', authMiddleware, async (req, res) => {
 
 // PATCH /api/reserve/:id/state
 // Cambiar state: Confirmar, Cancelar, Reprogramar
+// routes/reserve.js
 router.patch('/:id/state', authMiddleware, async (req, res) => {
   let { action, fechaInicio } = req.body;
-  if (!action)
-    return res.status(400).json({ error: 'action es obligatorio' });
+  if (!action) return res.status(400).json({ error: 'action es obligatorio' });
 
-  // Normalizamos: primera letra mayúscula, resto minúsculas
-  action = action.charAt(0).toUpperCase() + action.slice(1).toLowerCase();
+  action = action[0].toUpperCase() + action.slice(1).toLowerCase();
 
   try {
-    const reserva = await Reserva.findById(req.params.id);
-    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
-
-    if (!canTransition(req.user.role, reserva.state, action))
-      return res.status(403).json({ error: 'Acción no permitida' });
-
-    const update = { state: nextState(reserva.state, action) };
-    if (action === 'Reprogramar') {
-      if (!fechaInicio)
-        return res.status(400).json({ error: 'fechaInicio es obligatorio para reprogramar' });
-      update.fechaInicio = new Date(fechaInicio);
-    }
-
-    await Reserva.updateOne(
-      { _id: reserva._id, state: reserva.state },
-      { $set: update }
-    );
-
-    const updated = await Reserva.findById(reserva._id)
+    // 1️⃣ Cargo la reserva
+    const reserva = await Reserva.findById(req.params.id)
       .populate('servicio','titulo duracion')
       .populate('cliente','nombre apellido email');
-    res.json(updated);
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+    // 2️⃣ Valido transición
+    if (!canTransition(req.user.role, reserva.estado, action)) {
+      return res.status(403).json({ error: 'Acción no permitida' });
+    }
+
+    // 3️⃣ Calculo nuevo estado
+    const nuevoEstado = nextState(reserva.estado, action);
+    reserva.estado = nuevoEstado;
+
+    // 4️⃣ Si reprogramo, actualizo fecha
+    if (action === 'Reprogramar') {
+      if (!fechaInicio) {
+        return res.status(400).json({ error: 'fechaInicio es obligatorio para reprogramar' });
+      }
+      reserva.fechaInicio = new Date(fechaInicio);
+    }
+
+    // 5️⃣ Guardo cambios directamente sobre el documento
+    await reserva.save();
+
+    // 6️⃣ Devuelvo la reserva ya actualizada
+    return res.json(reserva);
 
   } catch (err) {
-    console.error('❌ ERROR /reserve/:id/state:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('❌ ERROR /reserve/:id/state:', err);
+    return res.status(500).json({ error: 'Error interno' });
   }
 });
 

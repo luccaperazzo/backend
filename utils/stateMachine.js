@@ -1,3 +1,4 @@
+
 const SYSTEM_ROLE = 'system';
 
 const transitions = Object.freeze({
@@ -7,7 +8,7 @@ const transitions = Object.freeze({
     Reprogramar: { to: 'Pendiente', role: 'cliente' },
   },
   Aceptado: {
-    Cancelar:    { to: 'Cancelado', role: 'cliente' },
+    Cancelar:    { to: 'Cancelado', role: ['cliente','entrenador'] },
     AutoFinalizar: { to: 'Finalizado', role: SYSTEM_ROLE }
   },
   Finalizado: {},
