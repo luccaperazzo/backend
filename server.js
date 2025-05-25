@@ -32,6 +32,10 @@ require('./utils/cron');
 const trainersRoutes = require('./routes/trainers');
 app.use('/api/trainers', trainersRoutes);
 
+// Rutas de pago
+const paymentRoutes = require('./routes/payment');
+app.use('/api/payment', paymentRoutes);
+
 // Ruta de prueba
 app.get('/api/ping', (req, res) => {
   res.json({ message: 'API funcionando 💪' });
