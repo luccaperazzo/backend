@@ -82,7 +82,7 @@ router.post('/create', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { titulo, descripcion, precio, categoria, duracion, presencial, disponibilidad } = value;
+  const { titulo, descripcion, precio, categoria, duracion, presencial, disponibilidad,vistas } = value;
 
   try {
     // 0️⃣ Validar que cada bloque cumpla la duración
@@ -135,6 +135,7 @@ router.post('/create', authMiddleware, async (req, res) => {
       duracion,
       presencial,
       disponibilidad,
+      vistas,
       entrenador: req.user.userId
     });
 
@@ -149,82 +150,101 @@ router.post('/create', authMiddleware, async (req, res) => {
 
 
 
-// GET /api/trainers -> Listar entrenadores por filtros 
-router.get('/trainers', async (req, res) => {
+router.get('/trainers', authMiddleware, async (req, res) => {
   try {
+    // Solo clientes pueden ver el listado
+    if (req.user.role !== 'cliente') {
+      return res.status(403).json({ error: 'No autorizado. Solo clientes pueden buscar entrenadores.' });
+    }
+
+    // === Filtros desde query ===
     const {
-      categoria,
-      presencial,
-      precioMin,
-      precioMax,
-      duracionMin,
-      duracionMax,
-      zona,
-      idioma
+      categoria,      // ÚNICA (string)
+      presencial,     // 'presencial', 'virtual', o no definido (ambos)
+      precioMax,      // number (opcional)
+      duracion,       // number (30,45,60,90) - ÚNICO valor
+      zona,           // string, barrio (enum en User)
+      idioma          // puede venir como string separado por coma o array
     } = req.query;
 
-    // Paso 1: Filtro de servicios (si hay filtros de servicio)
-    const servicioFiltro = {
-      publicado : true,
-      ...(categoria && { categoria }),
-      ...(presencial !== undefined && { presencial: presencial === 'true' }),
-      ...(precioMin && { precio: { $gte: parseFloat(precioMin) } }),
-      ...(precioMax && {
-        precio: {
-          ...(precioMin ? { $gte: parseFloat(precioMin) } : {}),
-          $lte: parseFloat(precioMax)
-        }
-      }),
-      ...(duracionMin && { duracion: { $gte: parseInt(duracionMin) } }),
-      ...(duracionMax && {
-        duracion: {
-          ...(duracionMin ? { $gte: parseInt(duracionMin) } : {}),
-          $lte: parseInt(duracionMax)
-        }
-      })
+    // ====== Filtro de servicios ======
+    let servicioFiltro = {
+      publicado: true,
+      ...(categoria && { categoria }), // solo uno
+      ...(precioMax && { precio: { $lte: parseFloat(precioMax) } }),
+      ...(duracion && [30,45,60,90].includes(Number(duracion)) && { duracion: Number(duracion) }),
     };
 
-    // Paso 2: Buscar servicios que coincidan con el filtro
+    // Filtrado presencial/virtual/ambos (campo booleano)
+    if (presencial === 'presencial') {
+      servicioFiltro.presencial = true;
+    } else if (presencial === 'virtual') {
+      servicioFiltro.presencial = false;
+    }
+    // Si no viene presencial, no se filtra (ambos)
+
+    // ====== Buscar servicios ======
     const servicios = await Service.find(servicioFiltro);
-    console.log('⏺️ Servicios encontrados:', servicios.length);
     if (servicios.length === 0) {
       return res.json({ entrenadores: [] });
     }
-
-    // Paso 3: Obtener IDs de entrenadores asociados a esos servicios
+    // IDs de entrenadores
     const idsEntrenadores = [...new Set(servicios.map(s => s.entrenador.toString()))];
-    console.log('⏺️ IDs de entrenadores:', idsEntrenadores);
 
-    // Paso 4: Filtro de entrenadores (si hay filtros de entrenadores)
-    const userFiltro = {
+    // ====== Filtro de entrenadores ======
+    // -- Zona debe ser única y enum, así que solo admitimos si zona es válida --
+    const barriosCABA = [
+      "Almagro", "Balvanera", "Barracas", "Belgrano", "Boedo",
+      "Caballito", "Chacarita", "Coghlan", "Colegiales", "Constitución",
+      "Flores", "Floresta", "La Boca", "La Paternal", "Liniers", "Mataderos",
+      "Monserrat", "Monte Castro", "Nueva Pompeya", "Nuñez", "Palermo",
+      "Parque Avellaneda", "Parque Chacabuco", "Parque Chas", "Parque Patricios",
+      "Puerto Madero", "Recoleta", "Retiro", "Saavedra", "San Cristóbal",
+      "San Nicolás", "San Telmo", "Vélez Sarsfield", "Versalles", "Villa Crespo",
+      "Villa del Parque", "Villa Devoto", "Villa Gral. Mitre", "Villa Lugano",
+      "Villa Luro", "Villa Ortúzar", "Villa Pueyrredón", "Villa Real",
+      "Villa Riachuelo", "Villa Santa Rita", "Villa Soldati", "Villa Urquiza"
+    ];
+
+    let userFiltro = {
       _id: { $in: idsEntrenadores },
       role: 'entrenador',
-      ...(zona && { zona }),
-      ...(idioma && { idiomas: idioma })
+      ...(zona && barriosCABA.includes(zona) ? { zona } : {}),
     };
 
-    // Paso 5: Buscar entrenadores que coincidan con el filtro
-    const entrenadores = await User.find(userFiltro).select('-password');
-    console.log('⏺️ Entrenadores encontrados:', entrenadores.length);
+    // ====== Idiomas: OR (al menos 1 coincide) ======
+    let idiomasFiltro = undefined;
+    if (idioma) {
+      // Puede venir como string separado por coma o como array
+      let idiomasArray = Array.isArray(idioma) ? idioma : idioma.split(',').map(i => i.trim());
+      // Solo aceptamos valores válidos
+      const idiomasValidos = ["Español", "Inglés", "Portugués"];
+      idiomasArray = idiomasArray.filter(idm => idiomasValidos.includes(idm));
+      if (idiomasArray.length) {
+        userFiltro.idiomas = { $in: idiomasArray };
+      }
+    }
 
-    // Paso 6: Devolver entrenadores
+    // ====== Buscar entrenadores ======
+    const entrenadores = await User.find(userFiltro).select('-password');
     res.json({ entrenadores });
+
   } catch (error) {
     console.error('❌ Error en /trainers:', error);
     res.status(500).json({ error: 'Error al obtener entrenadores' });
   }
 });
 
-
-// Obtener los servicios publicados de un entrenador por ID 
+// Obtener solo la preview de los servicios publicados de un entrenador
 router.get('/trainer/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Trae solo los campos básicos (preview)
     const servicios = await Service.find({
       entrenador: id,
       publicado: true
-    });
+    }).select('titulo precio categoria duracion presencial');
 
     res.json({ servicios });
   } catch (err) {
@@ -232,6 +252,7 @@ router.get('/trainer/:id', async (req, res) => {
     res.status(500).json({ error: 'Error al obtener servicios del entrenador' });
   }
 });
+
 
 
 
@@ -258,14 +279,21 @@ router.get('/my', authMiddleware, async (req, res) => {
 // 4️⃣ Detalle de un servicio por ID (público)
 router.get('/:id', async (req, res) => {
   try {
+    // Incrementar el contador de vistas
+    await Service.findByIdAndUpdate(req.params.id, { $inc: { vistas: 1 } });
+
+    // Buscar y devolver el servicio actualizado (sin esperar a que se actualicen las vistas en el doc retornado)
     const servicio = await Service.findById(req.params.id)
       .populate('entrenador', 'nombre apellido email');
+
     if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
+
     res.json(servicio);
   } catch (err) {
     res.status(500).json({ error: 'Error al obtener el servicio' });
   }
 });
+
 
 // 5️⃣ Actualizar un servicio (solo dueño)
 router.put('/:id', authMiddleware, async (req, res) => {
@@ -364,6 +392,13 @@ router.get('/:id/real-availability', async (req, res) => {
   try {
     const { fecha } = req.query;
     console.log("Fecha recibida:", fecha);  // Verifica la fecha recibida
+
+    // VALIDACIÓN DE FECHA PASADA
+    const hoy = dayjs().utc().startOf('day');
+    const diaConsulta = dayjs(fecha).utc().startOf('day');
+    if (diaConsulta.isBefore(hoy)) {
+      return res.status(400).json({ error: 'No se puede consultar disponibilidad para fechas pasadas.' });
+    }
 
     const servicio = await Service.findById(req.params.id);
     if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });

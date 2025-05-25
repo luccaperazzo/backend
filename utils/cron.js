@@ -6,7 +6,7 @@ const { SYSTEM_ROLE, nextState } = require('./stateMachine');
 cron.schedule('* * * * *', async () => {
   try {
     const ahora = Date.now();
-
+  console.log(`Ejecutando cron de reservas... ${new Date(ahora).toISOString()}`);
     // Solo reservas en Aceptado
     const aceptadas = await Reserva.find({ estado: 'Aceptado' }).populate('servicio');
 

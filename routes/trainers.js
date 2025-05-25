@@ -6,6 +6,7 @@ const validateReservation = require('../middleware/validateReservation');
 const Rating       = require('../models/Rating');
 const TrainerStats = require('../models/TrainerStats');
 const Reserva = require('../models/Reserva');
+const Service = require('../models/Service');
 
 /*
 // Obtener todos los entrenadores + filtro de zona e idioma
@@ -38,6 +39,58 @@ router.get('/', async (req, res) => {
 
 
 */
+
+router.get('/top-trainers', async (req, res) => {
+  try {
+    // 1. Buscar los 3 mejores entrenadores por avgRating y totalRatings
+    const topStats = await TrainerStats.find({})
+      .sort({ avgRating: -1, totalRatings: -1 }) // Ordena por rating, luego más ratings
+      .limit(3)
+      .populate('entrenador', 'nombre apellido presentacion zona idiomas'); // Trae solo estos campos del User
+
+    // 2. Mapear para enviar los datos combinados
+    const result = topStats.map(stats => ({
+      _id: stats.entrenador._id,
+      nombre: stats.entrenador.nombre,
+      apellido: stats.entrenador.apellido,
+      presentacion: stats.entrenador.presentacion,
+      zona: stats.entrenador.zona,
+      idiomas: stats.entrenador.idiomas,
+      avgRating: stats.avgRating,
+      totalRatings: stats.totalRatings
+    }));
+
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({ error: 'Error al traer entrenadores top' });
+  }
+});
+
+
+// Traer perfil completo de un entrenador, incluyendo su rating promedio
+router.get('/:id', async (req, res) => {
+  try {
+    // 1. Trae el entrenador
+    const entrenador = await User.findOne({
+      _id: req.params.id,
+      role: 'entrenador'
+    }).select('-password -__v').lean();
+
+    if (!entrenador) {
+      return res.status(404).json({ error: 'Entrenador no encontrado' });
+    }
+
+    // 2. Busca el promedio de ratings en TrainerStats
+    const stats = await TrainerStats.findOne({ entrenador: entrenador._id });
+    entrenador.avgRating = stats ? stats.avgRating : 0;
+
+    res.json(entrenador);
+  } catch (err) {
+    console.error('❌ Error al traer entrenador:', err);
+    res.status(500).json({ error: 'Error interno al buscar entrenador' });
+  }
+});
 
 
 router.get('/', authMiddleware, async (req, res) => {
@@ -115,6 +168,16 @@ router.post(
       const entrenadorId = req.params.id;
       const clienteId    = req.user.userId;
 
+      // 1️⃣ Verificar si ya existe un comentario para este entrenador y cliente
+      const existente = await Rating.findOne({
+        entrenador: entrenadorId,
+        cliente: clienteId
+      });
+      if (existente) {
+        return res.status(400).json({ error: 'Ya dejaste un comentario para este entrenador.' });
+      }
+
+      
       // 1️⃣ Validaciones básicas
       if (!texto || typeof texto !== 'string' || texto.trim().length === 0 || texto.trim().length > 500) {
         return res.status(400).json({ error: 'Texto inválido (1–500 caracteres)' });
@@ -248,6 +311,45 @@ router.post(
     });
   }
 );
+
+
+
+// routes/trainers.js
+router.get('/:id/service-metrics', authMiddleware, async (req, res) => {
+  const servicios = await Service.find({ entrenador: req.params.id }).select('titulo vistas');
+  const reservas = await Reserva.aggregate([
+    { $match: { servicio: { $in: servicios.map(s => s._id) } } },
+    { $group: { _id: '$servicio', total: { $sum: 1 } } }
+  ]);
+
+  // Map reservas por servicio
+  const reservasMap = {};
+  reservas.forEach(r => { reservasMap[r._id] = r.total; });
+
+  // Devuelve en el formato esperado
+  const out = servicios.map(s => ({
+    servicio: s.titulo,
+    vistas: s.vistas,
+    reservas: reservasMap[s._id.toString()] || 0,
+    tasaConversion: s.vistas
+      ? ((reservasMap[s._id.toString()] || 0) / s.vistas * 100).toFixed(1) + '%'
+      : '0%'
+  }));
+
+  // Totales
+  const totalVistas = out.reduce((sum, s) => sum + s.vistas, 0);
+  const totalReservas = out.reduce((sum, s) => sum + s.reservas, 0);
+  const totalTasa = totalVistas ? ((totalReservas / totalVistas) * 100).toFixed(1) + '%' : '0%';
+
+  out.push({
+    servicio: 'Total',
+    vistas: totalVistas,
+    reservas: totalReservas,
+    tasaConversion: totalTasa
+  });
+
+  res.json(out);
+});
 
 
 module.exports = router;
