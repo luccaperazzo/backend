@@ -217,4 +217,6 @@ Con esta lista podés verificar **todas** las interacciones posibles entre Postm
 1. Levantar el servidor (`npm start` o `nodemon server.js`).
 2. Usar el **token** correcto en `Authorization` para rutas protegidas.
 
+Para que stripe pueda modificar registros se debe ejecutar en una terminal aparte (./stripe.exe listen --forward-to localhost:3001/api/payment/webhook)
+
 ¡A probar! 🚀

@@ -3,9 +3,13 @@
 const express = require("express");
 const router = express.Router();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const bodyParser = require("body-parser");
 const auth = require("../middleware/authMiddleware");
 const User = require("../models/User");
 const Service = require("../models/Service");
+const Reserva = require("../models/Reserva");
+
+
 
 // Ruta protegida para crear sesión de pago con Stripe Checkout
 router.post("/create-checkout-session", auth, async (req, res) => {
@@ -59,6 +63,7 @@ router.post("/create-checkout-session", auth, async (req, res) => {
       metadata: {
         serviceId, // ID del servicio comprado (para usar luego en la reserva)
         userId: req.user.userId, // ID del cliente interno
+        fechaInicio: new Date().toISOString(), // Fecha de inicio de la reserva (puede ser modificada luego)
         cliente: `${cliente.nombre} ${cliente.apellido} <${cliente.email}>`
       }
     });
@@ -69,6 +74,44 @@ router.post("/create-checkout-session", auth, async (req, res) => {
     console.error("Error al crear checkout session:", err);
     res.status(500).json({ message: "Error interno en el pago" });
   }
+});
+
+// -------------------------
+// WEBHOOK DE STRIPE
+// -------------------------
+// Esta ruta escucha eventos automáticos desde Stripe
+router.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error("Error al verificar firma del webhook:", err);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+
+    try {
+      const { serviceId, userId, fechaInicio } = session.metadata;
+
+      // Se crea la reserva una vez confirmado el pago en Stripe
+      // La reserva queda en estado PENDIENTE
+      await Reserva.create({
+        cliente: userId,
+        servicio: serviceId,
+        fechaInicio: new Date(fechaInicio)
+      });
+
+      console.log("Reserva creada tras pago exitoso");
+    } catch (err) {
+      console.error("Error al crear reserva desde webhook:", err);
+    }
+  }
+
+  res.status(200).json({ received: true });
 });
 
 module.exports = router;
