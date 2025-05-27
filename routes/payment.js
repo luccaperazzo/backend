@@ -12,11 +12,17 @@ const Reserva = require("../models/Reserva");
 
 
 // Ruta protegida para crear sesión de pago con Stripe Checkout
-router.post("/create-checkout-session", auth, async (req, res) => {
-  const { serviceId } = req.body;
+router.post('/create-checkout-session', auth, async (req, res) => {
+  const { serviceId, fechaInicio } = req.body;
 
-  if (!serviceId) {
-    return res.status(400).json({ message: "Falta el ID del servicio" });
+  if (!serviceId || !fechaInicio) {
+    return res.status(400).json({ message: "Faltan datos: serviceId o fechaInicio" });
+  }
+
+  // Validá que fechaInicio sea una ISO válida
+  const inicioDate = new Date(fechaInicio);
+  if (isNaN(inicioDate.valueOf())) {
+    return res.status(400).json({ message: "Formato de fecha/hora inválido" });
   }
 
   try {
@@ -63,7 +69,7 @@ router.post("/create-checkout-session", auth, async (req, res) => {
       metadata: {
         serviceId, // ID del servicio comprado (para usar luego en la reserva)
         userId: req.user.userId, // ID del cliente interno
-        fechaInicio: new Date().toISOString(), // Fecha de inicio de la reserva (puede ser modificada luego)
+        fechaInicio, // Fecha de inicio de la reserva (puede ser modificada luego)
         cliente: `${cliente.nombre} ${cliente.apellido} <${cliente.email}>`
       }
     });
