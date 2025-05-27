@@ -5,7 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const validateReservation = require('../middleware/validateReservation');
 const Rating       = require('../models/Rating');
 const TrainerStats = require('../models/TrainerStats');
-const Reserva = require('../models/Reserva');
+const Reserva = require('../models/Reserve');
 const Service = require('../models/Service');
 
 /*

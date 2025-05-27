@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const Reserva = require('../models/Reserva');
+const Reserva = require('../models/Reserve');
 const Service = require('../models/Service');
 const { canTransition, nextState } = require('../utils/stateMachine');
 

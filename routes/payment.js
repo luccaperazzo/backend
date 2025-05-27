@@ -7,7 +7,7 @@ const bodyParser = require("body-parser");
 const auth = require("../middleware/authMiddleware");
 const User = require("../models/User");
 const Service = require("../models/Service");
-const Reserva = require("../models/Reserva");
+const Reserva = require("../models/Reserve");
 
 
 

@@ -1,5 +1,5 @@
 // middlewares/validateReservation.js
-const Reserva = require('../models/Reserva');
+const Reserva = require('../models/Reserve');
 const Service = require('../models/Service'); // Asumo que existe y tiene campo 'entrenador'
 const authMiddleware  = require('../middleware/authMiddleware');
 
