@@ -87,7 +87,7 @@ router.post('/login', async (req, res) => {
     if (!user) return res.status(400).json({ error: 'Credenciales inválidas' });
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(400).json({ error: 'Credenciales inválidas' });
+    if (!isMatch) return res.status(400).json({ error: 'Contraseña incorrecta' });
     console.log(isMatch)    // Generar token
     const token = jwt.sign(
       { userId: user._id, role: user.role },

@@ -17,7 +17,7 @@ router.post('/', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'servicioId y fechaInicio son obligatorios' });
 
   try {
-    const servicio = await Service.findById(servicioId);
+    const servicio = await Service.findById(servicioId).populate('entrenador');
     if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
     const reserva = await Reserva.create({
@@ -25,6 +25,17 @@ router.post('/', authMiddleware, async (req, res) => {
       servicio: servicioId,
       fechaInicio: new Date(fechaInicio)
     });
+
+    // Notificar al entrenador por email
+    const sendEmail = require('../utils/sendEmail');
+    const entrenador = servicio.entrenador;
+    await sendEmail(
+      entrenador.email,
+      'Nueva reserva pendiente de aprobación',
+      `<p>Hola ${entrenador.nombre},</p>
+      <p>Has recibido una nueva reserva para tu servicio <b>${servicio.titulo}</b>.</p>
+      <p>Por favor, ingresa a la plataforma para aceptarla o rechazarla.</p>`
+    );
 
     res.status(201).json(reserva);
   } catch (err) {
