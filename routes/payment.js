@@ -14,40 +14,61 @@ const Reserva = require("../models/Reserve");
 // Ruta protegida para crear sesión de pago con Stripe Checkout
 router.post('/create-checkout-session', auth, async (req, res) => {
   const { serviceId, fechaInicio } = req.body;
+  const userId = req.user.userId;
 
   if (!serviceId || !fechaInicio) {
     return res.status(400).json({ message: "Faltan datos: serviceId o fechaInicio" });
   }
 
-  // Validá que fechaInicio sea una ISO válida
+  // 1️⃣ parsear fecha
   const inicioDate = new Date(fechaInicio);
-  if (isNaN(inicioDate.valueOf())) {
+  if (isNaN(inicioDate)) {
     return res.status(400).json({ message: "Formato de fecha/hora inválido" });
   }
 
   try {
-    // Buscar el servicio y traer el entrenador vinculado
-    const servicio = await Service.findById(serviceId).populate("entrenador", "nombre apellido");
-    if (!servicio) {
-      return res.status(404).json({ message: "Servicio no encontrado" });
+    // 2️⃣ buscar servicio y duración
+    const servicio = await Service.findById(serviceId).populate("entrenador", "nombre apellido duracion");
+    if (!servicio) return res.status(404).json({ message: "Servicio no encontrado" });
+
+    // 3️⃣ buscar reservas del cliente pendientes/aceptadas
+    const existentes = await Reserva.find({
+      cliente: userId,
+      estado: { $in: ['Pendiente', 'Aceptado'] }
+    });
+
+    // 4️⃣ cálculo de intervalo nuevo
+    const nuevaInicio = inicioDate;
+    const nuevaFin    = new Date(nuevaInicio.getTime() + servicio.duracion * 60000);
+
+    // 5️⃣ comprobar solapamiento
+    const conflict = existentes.some(r => {
+      const ini = new Date(r.fechaInicio);
+      // IMPORTANTE: asegurate que r.duracion esté bien guardada en la reserva
+      const fin = new Date(ini.getTime() + (r.duracion || servicio.duracion) * 60000);
+      return ini < nuevaFin && fin > nuevaInicio;
+    });
+
+    if (conflict) {
+      return res.status(400).json({ message: 'Ya tenés otra sesión en ese horario.' });
+    }
+
+    // 6️⃣ Buscar al cliente autenticado
+    const cliente = await User.findById(userId);
+    if (!cliente) {
+      return res.status(404).json({ message: "Cliente no encontrado" });
     }
 
     const trainerName = `${servicio.entrenador.nombre} ${servicio.entrenador.apellido}`;
     const serviceName = servicio.titulo;
 
-    // Buscar al cliente autenticado
-    const cliente = await User.findById(req.user.userId);
-    if (!cliente) {
-      return res.status(404).json({ message: "Cliente no encontrado" });
-    }
-
-    // Crear un cliente real (customer) en Stripe
+    // 7️⃣ Crear un cliente real (customer) en Stripe
     const customer = await stripe.customers.create({
       email: cliente.email,
       name: `${cliente.nombre} ${cliente.apellido}`
     });
 
-    // Crear la sesión de Stripe con el customer creado
+    // 8️⃣ Crear la sesión de Stripe con el customer creado
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -64,17 +85,17 @@ router.post('/create-checkout-session', auth, async (req, res) => {
           quantity: 1
         }
       ],
-      success_url: "http://localhost:3000/success", // URL a redirigir luego del pago exitoso
-      cancel_url: "http://localhost:3000/cancel", // URL a redirigir si se cancela el proceso de pago
+      success_url: "http://localhost:3000/success",
+      cancel_url: "http://localhost:3000/cancel",
       metadata: {
-        serviceId, // ID del servicio comprado (para usar luego en la reserva)
-        userId: req.user.userId, // ID del cliente interno
-        fechaInicio, // Fecha de inicio de la reserva (puede ser modificada luego)
+        serviceId,
+        userId,
+        fechaInicio,
         cliente: `${cliente.nombre} ${cliente.apellido} <${cliente.email}>`
       }
     });
 
-    // Devolver la URL de la sesión de pago
+    // 9️⃣ Devolver la URL de la sesión de pago
     res.json({ url: session.url });
   } catch (err) {
     console.error("Error al crear checkout session:", err);
