@@ -134,6 +134,7 @@ router.get('/', authMiddleware, async (req, res) => {
       const base = entrenadoresMap.get(id);
       const stat = stats.find(s => String(s.entrenador) === id);
       return {
+        _id: base._id,
         nombre: base.nombre,
         apellido: base.apellido,
         avgRating: stat ? stat.avgRating : 0
