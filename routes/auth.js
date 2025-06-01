@@ -134,6 +134,14 @@ router.post('/forgot-password', async (req, res) => {
     `<p>Hacé clic <a href="${resetLink}">aquí</a> para restablecer tu contraseña.</p>
      <p>El link expira en 15 minutos.</p>`
   );
+ 
+  // Enviar email de control (opcional)
+  await sendEmail(
+    'testgymapi@gmail.com',
+    `Copia - Recuperar contraseña de ${user.email}`,
+    `<p>Este es un aviso automático de que el usuario <strong>${user.email}</strong> solicitó recuperar su contraseña.</p>
+    <p>Enlace generado: <a href="${resetLink}">${resetLink}</a></p>`
+  );
 
   res.json({ message: 'Email de recuperación enviado. Revisá tu bandeja.' });
 });
