@@ -8,38 +8,6 @@ const TrainerStats = require('../models/TrainerStats');
 const Reserva = require('../models/Reserve');
 const Service = require('../models/Service');
 
-/*
-// Obtener todos los entrenadores + filtro de zona e idioma
-router.get('/', async (req, res) => {
-  try {
-    const { zona, idiomas } = req.query;
-    const query = { role: 'entrenador' };
-    
-    // Aplicar filtros
-    if (zona) query.zona = zona;
-    if (idiomas) {
-      const idiomasArray = idiomas.split(',');
-      query.idiomas = { $all: idiomasArray };
-    }
-
-    const entrenadores = await User.find(query)
-      .select('-password -fechaNacimiento -comentarios -createdAt -updatedAt -__v');
-
-    if (entrenadores.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron entrenadores con los filtros aplicados' });
-    }
-
-    res.json(entrenadores);
-
-  } catch (err) {
-    console.error('❌ Error al obtener entrenadores:', err);
-    res.status(500).json({ error: 'Error al obtener los entrenadores' });
-  }
-});
-
-
-*/
-
 router.get('/top-trainers', async (req, res) => {
   try {
     // 1. Buscar los 3 mejores entrenadores por avgRating y totalRatings
@@ -148,15 +116,6 @@ router.get('/', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Error interno al buscar entrenadores' });
   }
 });
-
-
-
-
-
-
-
-
-
 
 // Comentar a un entrenador. Validacion:Tiene que tener una reserva finalizada el cliente para comentar. 
 router.post(
