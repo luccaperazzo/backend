@@ -11,7 +11,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 const User = require('../models/User');
 const diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
-const Reserva = require('../models/Reserva');  // Asegúrate de que la ruta sea correcta
+const Reserva = require('../models/Reserve');  // Asegúrate de que la ruta sea correcta
+const TrainerStats = require('../models/TrainerStats'); // ajustá la ruta si es necesario
 
 
 // 🔸 Joi Schema
@@ -42,10 +43,10 @@ const serviceSchema = Joi.object({
     'number.positive': 'El precio debe ser positivo',
     'any.required': 'El precio es obligatorio'
   }),
-  categoria: Joi.string().valid('Entrenamiento', 'Nutrición', 'Bienestar').required().messages({
+  categoria: Joi.string().valid('Entrenamiento', 'Nutrición', 'Consultoría').required().messages({
     'string.base': 'La categoría debe ser un texto',
     'any.required': 'La categoría es obligatoria',
-    'any.only': 'La categoría debe ser una de: Entrenamiento, Nutrición, Bienestar'
+    'any.only': 'La categoría debe ser una de: Entrenamiento, Nutrición, Consultoría'
   }),
   duracion: Joi.number().positive().required().messages({
     'number.base': 'La duración debe ser un número',
@@ -150,12 +151,8 @@ router.post('/create', authMiddleware, async (req, res) => {
 
 
 
-router.get('/trainers', authMiddleware, async (req, res) => {
+router.get('/trainers', async (req, res) => {
   try {
-    // Solo clientes pueden ver el listado
-    if (req.user.role !== 'cliente') {
-      return res.status(403).json({ error: 'No autorizado. Solo clientes pueden buscar entrenadores.' });
-    }
 
     // === Filtros desde query ===
     const {
@@ -227,7 +224,23 @@ router.get('/trainers', authMiddleware, async (req, res) => {
 
     // ====== Buscar entrenadores ======
     const entrenadores = await User.find(userFiltro).select('-password');
-    res.json({ entrenadores });
+    
+        // === Nuevo bloque: para cada entrenador, traemos sus stats y le agregamos avgRating ===
+    const entrenadoresConRating = await Promise.all(
+      entrenadores.map(async trainer => {
+        // lo pasamos a objeto plano para poder añadirle propiedades
+        const obj = trainer.toObject();
+        const stats = await TrainerStats.findOne({ entrenador: trainer._id }).lean();
+        obj.avgRating    = stats?.avgRating    ?? 0;
+        obj.totalRatings = stats?.totalRatings ?? 0;
+        // si quisieras ratingCounts:
+        // obj.ratingCounts = stats?.ratingCounts ?? { '1':0,'2':0,'3':0,'4':0,'5':0 };
+        return obj;
+      })
+    );
+    
+    
+    res.json({ entrenadores: entrenadoresConRating });
 
   } catch (error) {
     console.error('❌ Error en /trainers:', error);

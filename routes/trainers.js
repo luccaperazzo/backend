@@ -5,7 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const validateReservation = require('../middleware/validateReservation');
 const Rating       = require('../models/Rating');
 const TrainerStats = require('../models/TrainerStats');
-const Reserva = require('../models/Reserva');
+const Reserva = require('../models/Reserve');
 const Service = require('../models/Service');
 
 /*
@@ -134,6 +134,7 @@ router.get('/', authMiddleware, async (req, res) => {
       const base = entrenadoresMap.get(id);
       const stat = stats.find(s => String(s.entrenador) === id);
       return {
+        _id: base._id,
         nombre: base.nombre,
         apellido: base.apellido,
         avgRating: stat ? stat.avgRating : 0

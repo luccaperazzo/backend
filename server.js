@@ -3,11 +3,16 @@ require('dotenv').config();
 const express  = require('express');
 const mongoose = require('mongoose');
 const cors     = require('cors');
+const bodyParser = require("body-parser");
 const fileUpload    = require('express-fileupload');
 
 const app = express();
 
 app.use(cors());
+
+// Stripe necesita el cuerpo ANTES del json parser
+app.use("/api/payment/webhook", bodyParser.raw({ type: "application/json" }));
+
 app.use(express.json());
 app.use(fileUpload());
 

@@ -1,6 +1,6 @@
 // backend/utils/cron.js
 const cron        = require('node-cron');
-const Reserva     = require('../models/Reserva');
+const Reserva     = require('../models/Reserve');
 const { SYSTEM_ROLE, nextState } = require('./stateMachine');
 
 cron.schedule('* * * * *', async () => {
