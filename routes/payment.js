@@ -8,6 +8,7 @@ const auth = require("../middleware/authMiddleware");
 const User = require("../models/User");
 const Service = require("../models/Service");
 const Reserva = require("../models/Reserve");
+const sendEmail = require('../utils/sendEmail');
 
 
 
@@ -122,7 +123,7 @@ router.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req
     const session = event.data.object;
 
     try {
-      const { serviceId, userId, fechaInicio } = session.metadata;
+      const { serviceId, userId, fechaInicio, cliente } = session.metadata;
 
       // Se crea la reserva una vez confirmado el pago en Stripe
       // La reserva queda en estado PENDIENTE
@@ -133,6 +134,24 @@ router.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req
       });
 
       console.log("Reserva creada tras pago exitoso");
+
+      // Enviar email al entrenador notificando la nueva reserva
+        const servicio = await Service.findById(serviceId).populate("entrenador", "email nombre apellido titulo");
+        const entrenador = servicio.entrenador;
+
+        const subject = "Nueva reserva pendiente de aprobación";
+        const html = `
+          <p>Hola ${entrenador.nombre},</p>
+          <p>Has recibido una nueva reserva del cliente: <strong>${cliente}</strong>.</p>
+          <p>Servicio: <strong>${servicio.titulo}</strong></p>
+          <p>Fecha estimada de inicio: ${new Date(fechaInicio).toLocaleString()}</p>
+          <p>Por favor, ingresa a la plataforma para aceptarla o rechazarla.</p>
+        `;
+
+        console.log("📨 Enviando email a", entrenador.email);
+        await sendEmail(entrenador.email, subject, html);
+        await sendEmail("testgymapi@gmail.com", `Copia de reserva: ${entrenador.nombre}`, html);
+
     } catch (err) {
       console.error("Error al crear reserva desde webhook:", err);
     }
