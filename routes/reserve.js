@@ -50,10 +50,17 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     let reservas;
     if (req.user.role === 'cliente') {
-      reservas = await Reserva.find({ cliente: req.user.userId })
-        .populate('servicio', 'titulo duracion')
-        .sort({ fechaInicio: -1 });
-    } else if (req.user.role === 'entrenador') {
+  reservas = await Reserva.find({ cliente: req.user.userId })
+    .populate({
+      path: 'servicio',
+      select: 'titulo duracion entrenador',
+      populate: {
+        path: 'entrenador',
+        select: 'nombre apellido'
+      }
+    })
+    .sort({ fechaInicio: -1 });
+} else if (req.user.role === 'entrenador') {
       reservas = await Reserva.find()
         .populate({
           path: 'servicio',
@@ -116,6 +123,17 @@ router.patch('/:id/state', authMiddleware, async (req, res) => {
     console.error('❌ ERROR /reserve/:id/state:', err);
     return res.status(500).json({ error: 'Error interno' });
   }
+});
+
+
+
+router.get('/:id/documentos', authMiddleware, async (req, res) => {
+  const reserva = await Reserva.findById(req.params.id);
+  if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada.' });
+  // Solo el cliente o el entrenador pueden ver
+  if (![reserva.cliente.toString(), reserva.entrenador?.toString()].includes(req.user.userId))
+    return res.status(403).json({ error: 'No autorizado.' });
+  res.json(reserva.documentos || []);
 });
 
 

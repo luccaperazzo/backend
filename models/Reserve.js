@@ -9,7 +9,13 @@ const reserveSchema = new mongoose.Schema({
     type: String,
     enum: ['Pendiente', 'Aceptado', 'Finalizado', 'Cancelado'], 
     default: 'Pendiente'
-  }
+  },
+  documentos: [{
+  filename: String,
+  originalname: String,
+  descripcion: String,
+  fecha: Date
+}],
 }, { timestamps: true });
 
 module.exports = mongoose.models.Reserva || mongoose.model('Reserva', reserveSchema);
