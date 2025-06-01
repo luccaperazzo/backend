@@ -1,10 +1,17 @@
 // backend/routes/reserve.js
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const Reserva = require('../models/Reserva');
 const Service = require('../models/Service');
 const { canTransition, nextState } = require('../utils/stateMachine');
+
+const UPLOAD_PATH = process.env.UPLOAD_PATH || path.join(process.cwd(), 'uploads', 'reservas');
+if (!fs.existsSync(UPLOAD_PATH)) {
+  fs.mkdirSync(UPLOAD_PATH, { recursive: true });
+}
 
 // POST  /api/reserve
 // Crear una nueva reserva (solo clientes)
@@ -107,6 +114,117 @@ router.patch('/:id/state', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/reserve/:id/documents
+// Listar nombres de documentos asociados a una reserva
+router.get('/:id/documents', authMiddleware, async (req, res) => {
+  try {
+    const reserva = await Reserva.findById(req.params.id).populate('servicio');
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+    // Solo cliente propietario o entrenador propietario pueden consultar
+    if (req.user.role === 'cliente') {
+      if (reserva.cliente.toString() !== req.user.userId)
+        return res.status(403).json({ error: 'No autorizado para ver documentos' });
+    } else if (req.user.role === 'entrenador') {
+      if (reserva.servicio.entrenador.toString() !== req.user.userId)
+        return res.status(403).json({ error: 'No autorizado para ver documentos' });
+    } else {
+      return res.status(403).json({ error: 'Rol no autorizado' });
+    }
+
+    res.json({ documentos: reserva.documentos });
+  } catch (err) {
+    console.error('❌ ERROR GET /reserve/:id/documents:', err);
+    res.status(500).json({ error: 'Error al obtener documentos' });
+  }
+});
+
+// POST /api/reserve/:id/documents
+router.post('/:id/documents', authMiddleware, async (req, res) => {
+  try {
+    if (!req.files || !req.files.document)
+      return res.status(400).json({ error: 'Debe incluir un archivo PDF en el campo "document"' });
+
+    const file = req.files.document;
+    if (file.mimetype !== 'application/pdf')
+      return res.status(400).json({ error: 'Solo se permiten archivos PDF' });
+
+    const reserva = await Reserva.findById(req.params.id).populate('servicio');
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
+    if (req.user.role !== 'entrenador' || reserva.servicio.entrenador.toString() !== req.user.userId)
+      return res.status(403).json({ error: 'Solo el entrenador propietario puede subir documentos' });
+    if (reserva.estado !== 'Aceptado')
+      return res.status(400).json({ error: 'Solo se pueden subir documentos en estado Aceptado' });
+
+    const filename = `${reserva._id}_${Date.now()}_${file.name}`;
+    const savePath = path.join(UPLOAD_PATH, filename);
+    await file.mv(savePath);
+
+    reserva.documentos.push(filename);
+    await reserva.save();
+
+    res.status(201).json({ message: 'Documento subido', filename });
+  } catch (err) {
+    console.error('❌ ERROR /reserve/:id/documents POST:', err);
+    res.status(500).json({ error: 'Error al subir documento' });
+  }
+});
+
+// DELETE /api/reserve/:id/documents/:filename
+router.delete('/:id/documents/:filename', authMiddleware, async (req, res) => {
+  try {
+    const { id, filename } = req.params;
+    const reserva = await Reserva.findById(id).populate('servicio');
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+    if (req.user.role !== 'entrenador' || reserva.servicio.entrenador.toString() !== req.user.userId)
+      return res.status(403).json({ error: 'No autorizado para eliminar documentos' });
+
+    if (!reserva.documentos.includes(filename))
+      return res.status(404).json({ error: 'Documento no registrado en la reserva' });
+
+    const filePath = path.join(UPLOAD_PATH, filename);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    reserva.documentos = reserva.documentos.filter(doc => doc !== filename);
+    await reserva.save();
+
+    res.json({ message: 'Documento eliminado', filename });
+  } catch (err) {
+    console.error('❌ ERROR /reserve/:id/documents DELETE:', err);
+    res.status(500).json({ error: 'Error al eliminar documento' });
+  }
+});
+
+router.get('/:id/documents/:filename', authMiddleware, async (req, res) => {
+  try {
+    const { id, filename } = req.params;
+    const reserva = await Reserva.findById(id).populate('servicio');
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+    // Validar rol y propiedad
+    const isCliente = req.user.role === 'cliente' && reserva.cliente.toString() === req.user.userId;
+    const isEntrenador = req.user.role === 'entrenador' && reserva.servicio.entrenador.toString() === req.user.userId;
+    if (!isCliente && !isEntrenador)
+      return res.status(403).json({ error: 'No autorizado para descargar documentos' });
+
+    // Solo si está Aceptado o Finalizado
+    if (!['Aceptado', 'Finalizado'].includes(reserva.estado))
+      return res.status(400).json({ error: 'No se puede descargar en el estado actual' });
+
+    if (!reserva.documentos.includes(filename))
+      return res.status(404).json({ error: 'Documento no encontrado en esta reserva' });
+
+    const filePath = path.join(UPLOAD_PATH, filename);
+    if (!fs.existsSync(filePath))
+      return res.status(404).json({ error: 'Archivo no existe en el servidor' });
+
+    res.download(filePath, filename);
+  } catch (err) {
+    console.error('❌ ERROR GET /reserve/:id/documents/:filename:', err);
+    res.status(500).json({ error: 'Error al descargar documento' });
+  }
+});
 
 module.exports = router;
 
