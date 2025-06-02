@@ -5,17 +5,8 @@ const reserveSchema = new mongoose.Schema({
   servicio:     { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
   fechareserva: { type: Date, default: Date.now },
   fechaInicio:  { type: Date, required: true },
-  estado: {
-    type: String,
-    enum: ['Pendiente', 'Aceptado', 'Finalizado', 'Cancelado'], 
-    default: 'Pendiente'
-  },
-  documentos: [{
-  filename: String,
-  originalname: String,
-  descripcion: String,
-  fecha: Date
-}],
+  estado:       { type: String, enum: ['Pendiente', 'Aceptado', 'Finalizado', 'Cancelado'], default: 'Pendiente' },
+  documentos:   [{ type: String, trim: true }] // Array de nombres de archivos PDF, sin espacios adicionales
 }, { timestamps: true });
 
 module.exports = mongoose.models.Reserva || mongoose.model('Reserva', reserveSchema);
