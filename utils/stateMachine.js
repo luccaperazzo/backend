@@ -5,7 +5,7 @@ const transitions = Object.freeze({
   Pendiente: {
     Confirmar:   { to: 'Aceptado',  role: 'entrenador' },
     Cancelar:    { to: 'Cancelado', role: ['cliente','entrenador'] },
-    Reprogramar: { to: 'Pendiente', role: 'cliente' },
+    Reprogramar: { to: 'Pendiente', role: ['cliente','entrenador'] },
   },
   Aceptado: {
     Cancelar:    { to: 'Cancelado', role: ['cliente','entrenador'] },

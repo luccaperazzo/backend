@@ -150,7 +150,6 @@ router.post('/create', authMiddleware, async (req, res) => {
 });
 
 
-
 router.get('/trainers', async (req, res) => {
   try {
 
@@ -266,10 +265,6 @@ router.get('/trainer/:id', async (req, res) => {
   }
 });
 
-
-
-
-
 // 3️⃣ Listar todos los servicios de un trainer (solo trainer)
 router.get('/my', authMiddleware, async (req, res) => {
   try {
@@ -361,7 +356,6 @@ router.patch('/:id/publish', authMiddleware, async (req, res) => {
     res.status(500).json({ msg: 'Error del servidor' });
   }
 });
-
 
 // Mapeo de días de la semana de inglés a español
 const traduccionDias = {

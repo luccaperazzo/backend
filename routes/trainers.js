@@ -272,8 +272,6 @@ router.post(
   }
 );
 
-
-
 // routes/trainers.js
 router.get('/:id/service-metrics', authMiddleware, async (req, res) => {
   const servicios = await Service.find({ entrenador: req.params.id }).select('titulo vistas');
@@ -311,67 +309,4 @@ router.get('/:id/service-metrics', authMiddleware, async (req, res) => {
   res.json(out);
 });
 
-
-
-
-const multer = require('multer');
-const path = require('path');
-
-// Configuración de multer
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../uploads/documentos'));
-  },
-  filename: function (req, file, cb) {
-    // nombre: reservaId-timestamp-original.ext
-    const ext = path.extname(file.originalname);
-    cb(null, `${req.body.reservaId}-${Date.now()}${ext}`);
-  }
-});
-const upload = multer({ storage });
-
-// POST /api/trainers/upload-document
-router.post(
-  '/upload-document',
-  authMiddleware,
-  upload.fields([
-    { name: 'archivo', maxCount: 1 },
-    { name: 'reservaId', maxCount: 1 },
-    { name: 'descripcion', maxCount: 1 }
-  ]),
-  async (req, res) => {
-    if (req.user.role !== 'entrenador')
-      return res.status(403).json({ error: 'Solo entrenadores pueden subir archivos.' });
-
-    // Multer con .fields pone los campos en req.body como arrays
-    const reservaId = Array.isArray(req.body.reservaId) ? req.body.reservaId[0] : req.body.reservaId;
-    const descripcion = Array.isArray(req.body.descripcion) ? req.body.descripcion[0] : req.body.descripcion;
-    const file = req.files && req.files.archivo && req.files.archivo[0];
-
-    if (!file || !reservaId)
-      return res.status(400).json({ error: 'Archivo y reservaId son obligatorios.' });
-
-    const reserva = await Reserva.findById(reservaId).populate('servicio');
-    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada.' });
-
-    if (reserva.estado !== 'Aceptado') {
-      return res.status(403).json({ error: 'Solo se pueden subir documentos en reservas aceptadas.' });
-    }
-
-    if (String(reserva.servicio.entrenador) !== req.user.userId) {
-      return res.status(403).json({ error: 'No tienes permiso para subir documentos a esta reserva.' });
-    }
-
-    if (!reserva.documentos) reserva.documentos = [];
-    reserva.documentos.push({
-      filename: file.filename,
-      originalname: file.originalname,
-      descripcion: descripcion || "",
-      fecha: new Date()
-    });
-    await reserva.save();
-
-    res.json({ ok: true, file: file.filename });
-  }
-);
 module.exports = router;
