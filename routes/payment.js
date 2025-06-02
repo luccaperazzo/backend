@@ -144,7 +144,7 @@ router.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req
           <p>Hola ${entrenador.nombre},</p>
           <p>Has recibido una nueva reserva del cliente: <strong>${cliente}</strong>.</p>
           <p>Servicio: <strong>${servicio.titulo}</strong></p>
-          <p>Fecha estimada de inicio: ${new Date(fechaInicio).toLocaleString()}</p>
+          <p>Fecha de inicio: ${new Date(fechaInicio).toLocaleString()}</p>
           <p>Por favor, ingresa a la plataforma para aceptarla o rechazarla.</p>
         `;
 
