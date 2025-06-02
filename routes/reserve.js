@@ -309,30 +309,78 @@ router.delete('/:id/documents/:filename', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/reserve/:id/documents/:filename - CON DEBUGGING
 router.get('/:id/documents/:filename', authMiddleware, async (req, res) => {
   try {
     const { id, filename } = req.params;
+    
+    // LOGS DE DEBUGGING
+    console.log('🔍 DEBUG Backend - Descarga solicitada:');
+    console.log('  - ID Reserva:', id);
+    console.log('  - Filename recibido:', filename);
+    console.log('  - Filename decodificado:', decodeURIComponent(filename));
+    console.log('  - Usuario:', req.user.userId, req.user.role);
+    
     const reserva = await Reserva.findById(id).populate('servicio');
-    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
+    if (!reserva) {
+      console.log('❌ Reserva no encontrada');
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    console.log('🔍 DEBUG - Documentos en BD:', reserva.documentos);
+    console.log('🔍 DEBUG - Estado reserva:', reserva.estado);
 
     // Validar rol y propiedad
     const isCliente = req.user.role === 'cliente' && reserva.cliente.toString() === req.user.userId;
     const isEntrenador = req.user.role === 'entrenador' && reserva.servicio.entrenador.toString() === req.user.userId;
-    if (!isCliente && !isEntrenador)
+    
+    if (!isCliente && !isEntrenador) {
+      console.log('❌ No autorizado');
       return res.status(403).json({ error: 'No autorizado para descargar documentos' });
+    }
 
     // Solo si está Aceptado o Finalizado
-    if (!['Aceptado', 'Finalizado'].includes(reserva.estado))
+    if (!['Aceptado', 'Finalizado'].includes(reserva.estado)) {
+      console.log('❌ Estado no válido:', reserva.estado);
       return res.status(400).json({ error: 'No se puede descargar en el estado actual' });
+    }
 
-    if (!reserva.documentos.includes(filename))
+    // Decodificar el filename por si tiene caracteres especiales
+    const decodedFilename = decodeURIComponent(filename);
+    console.log('🔍 DEBUG - Buscando filename:', decodedFilename);
+    console.log('🔍 DEBUG - ¿Existe en array?:', reserva.documentos.includes(decodedFilename));
+
+    if (!reserva.documentos.includes(decodedFilename)) {
+      console.log('❌ Documento no encontrado en reserva');
+      console.log('  - Documentos disponibles:', reserva.documentos);
+      console.log('  - Filename buscado:', decodedFilename);
       return res.status(404).json({ error: 'Documento no encontrado en esta reserva' });
+    }
 
-    const filePath = path.join(UPLOAD_PATH, filename);
-    if (!fs.existsSync(filePath))
+    const filePath = path.join(UPLOAD_PATH, decodedFilename);
+    console.log('🔍 DEBUG - Ruta completa:', filePath);
+    console.log('🔍 DEBUG - UPLOAD_PATH:', UPLOAD_PATH);
+    
+    // Listar archivos en el directorio para debugging
+    try {
+      const filesInDir = fs.readdirSync(UPLOAD_PATH);
+      console.log('🔍 DEBUG - Archivos en directorio:', filesInDir);
+      console.log('🔍 DEBUG - ¿Archivo existe?:', fs.existsSync(filePath));
+    } catch (dirErr) {
+      console.log('❌ Error leyendo directorio:', dirErr.message);
+    }
+    
+    if (!fs.existsSync(filePath)) {
+      console.log('❌ Archivo no existe en servidor');
       return res.status(404).json({ error: 'Archivo no existe en el servidor' });
+    }
 
-    res.download(filePath, filename);
+    console.log('✅ Iniciando descarga...');
+    
+    // Usar el nombre original para la descarga
+    const originalName = decodedFilename.split('_').slice(2).join('_') || decodedFilename;
+    res.download(filePath, originalName);
+    
   } catch (err) {
     console.error('❌ ERROR GET /reserve/:id/documents/:filename:', err);
     res.status(500).json({ error: 'Error al descargar documento' });
