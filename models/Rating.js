@@ -20,6 +20,10 @@ const ratingSchema = new mongoose.Schema({
 
 // Hook que actualiza TrainerStats tras cada save()
 ratingSchema.post('save', async function(doc) {
+  // Solo actualizar stats si NO es solo una modificación de reply
+  if (this.isModified('reply') && !this.isModified('rating') && !this.isModified('texto')) {
+    return;
+  }
   const estrella = doc.rating;
   // calculo manual de avg si tu Mongo no soporta operaciones en pipeline:
   const stats = await TrainerStats.findOne({ entrenador: doc.entrenador });
