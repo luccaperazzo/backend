@@ -218,8 +218,6 @@ router.patch('/:id/state', authMiddleware, async (req, res) => {
   }
 });
 
-
-
 router.get('/:id/documentos', authMiddleware, async (req, res) => {
   const reserva = await Reserva.findById(req.params.id);
   if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada.' });
