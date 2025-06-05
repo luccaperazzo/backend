@@ -18,12 +18,24 @@ const IDIOMAS_ENUM = ["Español", "Inglés", "Portugués"];
 
 
 const userSchema = new mongoose.Schema({
-  nombre:          { type: String, required: true },
-  apellido:        { type: String, required: true },
-  email:           { type: String, required: true, unique: true },
-  password:        { type: String, required: true },
-  fechaNacimiento: { type: Date,   required: true },
-  role:            { type: String, enum: ['cliente', 'entrenador'], default: 'cliente' },
+  nombre:          { type: String, required: [true, 'El nombre es obligatorio.'] },
+  apellido:        { type: String, required: [true, 'El apellido es obligatorio.'] },
+  email:           { type: String, required: [true, 'El email es obligatorio.'], unique: true },
+  password:        { type: String, required: [true, 'La contraseña es obligatoria.'] },
+  fechaNacimiento: { 
+    type: Date,   
+    required: [true, 'La fecha de nacimiento es obligatoria.'],
+    validate: {
+      validator: function(value) {
+        if (!value) return false;
+        const today = new Date();
+        const minDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        return value <= minDate;
+      },
+      message: 'Debes tener al menos 18 años para registrarte.'
+    }
+  },
+  role:            { type: String, enum: ['cliente', 'entrenador'], default: 'cliente', required: [true, 'El rol es obligatorio.'] },
   resetToken: String,
   resetTokenExpires: Date,
 
@@ -32,24 +44,24 @@ const userSchema = new mongoose.Schema({
   zona: {
     type: String,
     enum: BARRIOS_CABA,
-    required: function() { return this.role === 'entrenador'; }
+    required: [function() { return this.role === 'entrenador'; }, 'La zona es obligatoria para entrenadores.']
   },
   presentacion: {
     type: String,
-    required: function() { return this.role === 'entrenador'; },
-    minlength: 10,
-    maxlength: 500
+    required: [function() { return this.role === 'entrenador'; }, 'La presentación es obligatoria para entrenadores.'],
+    minlength: [10, 'La presentación debe tener al menos 10 caracteres.'],
+    maxlength: [500, 'La presentación no puede superar los 200 caracteres.']
   },
   idiomas: {
     type: [String],
     enum: IDIOMAS_ENUM,  // 👈 Restringe los valores permitidos
-    required: function() { return this.role === 'entrenador'; },
+    required: [function() { return this.role === 'entrenador'; }, 'Debes indicar al menos un idioma.'], // Este mensaje aparece cuando el campo directamente no está
     validate: {
       validator: function(arr) {
         if (this.role !== 'entrenador') return true;
         return Array.isArray(arr) && arr.length > 0;
       },
-      message: 'Un entrenador debe indicar al menos un idioma.'
+      message: 'Un entrenador debe indicar al menos un idioma.' // Este mensaje aparecerá si el campo está vacío, es decir si idiomas = []
     }
   },
 }, { timestamps: true });

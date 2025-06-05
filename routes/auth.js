@@ -76,6 +76,12 @@ router.post('/register', async (req, res) => {
     if (err.code === 11000) {
       return res.status(400).json({ error: 'Email ya registrado' });
     }
+    // Manejo de errores de validación de Mongoose
+    if (err.name === "ValidationError" && err.errors) {
+      // Tomar el primer mensaje de error de validación
+      const firstError = Object.values(err.errors)[0];
+      return res.status(400).json({ error: firstError.message });
+    }
     res.status(500).json({ error: 'Error al crear usuario' });
   }
 });
@@ -120,7 +126,7 @@ router.post('/forgot-password', async (req, res) => {
 
   // Generar token y expiración
   const token = crypto.randomBytes(32).toString('hex');
-  user.resetToken = token;
+  user.resetToken = token; // el user lo ubica por el mail que pones en el body del endpoint
   user.resetTokenExpires = Date.now() + 15 * 60 * 1000; // 15 minutos
   await user.save();
 
