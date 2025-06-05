@@ -11,7 +11,7 @@ const Service = require('../models/Service');
 router.get('/top-trainers', async (req, res) => {
   try {
     // 1. Buscar los 3 mejores entrenadores por avgRating y totalRatings
-    const topStats = await TrainerStats.find({})
+    const topStats = await TrainerStats.find({}) //Si hay un trainer pero no tiene ratings, no lo traigo
       .sort({ avgRating: -1, totalRatings: -1 }) // Ordena por rating, luego más ratings
       .limit(3)
       .populate('entrenador', 'nombre apellido presentacion zona idiomas'); // Trae solo estos campos del User
