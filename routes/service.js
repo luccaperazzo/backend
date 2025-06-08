@@ -160,7 +160,8 @@ router.get('/trainers', async (req, res) => {
       precioMax,      // number (opcional)
       duracion,       // number (30,45,60,90) - ÚNICO valor
       zona,           // string, barrio (enum en User)
-      idioma          // puede venir como string separado por coma o array
+      idioma,         // puede venir como string separado por coma o array
+      rating         // número mínimo de rating (1-5)
     } = req.query;
 
     // ====== Filtro de servicios ======
@@ -224,7 +225,7 @@ router.get('/trainers', async (req, res) => {
     // ====== Buscar entrenadores ======
     const entrenadores = await User.find(userFiltro).select('-password');
     
-        // === Nuevo bloque: para cada entrenador, traemos sus stats y le agregamos avgRating ===
+    // === Nuevo bloque: para cada entrenador, traemos sus stats y le agregamos avgRating ===
     const entrenadoresConRating = await Promise.all(
       entrenadores.map(async trainer => {
         // lo pasamos a objeto plano para poder añadirle propiedades
@@ -232,14 +233,20 @@ router.get('/trainers', async (req, res) => {
         const stats = await TrainerStats.findOne({ entrenador: trainer._id }).lean();
         obj.avgRating    = stats?.avgRating    ?? 0;
         obj.totalRatings = stats?.totalRatings ?? 0;
-        // si quisieras ratingCounts:
-        // obj.ratingCounts = stats?.ratingCounts ?? { '1':0,'2':0,'3':0,'4':0,'5':0 };
         return obj;
       })
     );
     
+    // Filtrar por rating mínimo si se especificó
+    let entrenadoresFiltrados = entrenadoresConRating;
+    if (rating && rating !== "") {
+      const ratingMin = parseInt(rating);
+      if (!isNaN(ratingMin)) {
+        entrenadoresFiltrados = entrenadoresConRating.filter(e => e.avgRating >= ratingMin);
+      }
+    }
     
-    res.json({ entrenadores: entrenadoresConRating });
+    res.json({ entrenadores: entrenadoresFiltrados });
 
   } catch (error) {
     console.error('❌ Error en /trainers:', error);
