@@ -240,12 +240,15 @@ router.get('/trainers', async (req, res) => {
     // Filtrar por rating mínimo si se especificó
     let entrenadoresFiltrados = entrenadoresConRating;
     if (rating && rating !== "") {
-      const ratingMin = parseInt(rating);
-      if (!isNaN(ratingMin)) {
-        entrenadoresFiltrados = entrenadoresConRating.filter(e => e.avgRating >= ratingMin);
+      if (rating === "5+") {
+        entrenadoresFiltrados = entrenadoresConRating.filter(e => e.avgRating === 5);
+      } else {
+        const ratingMin = parseInt(rating);
+        if (!isNaN(ratingMin) && ratingMin >= 1 && ratingMin <= 5) {
+          entrenadoresFiltrados = entrenadoresConRating.filter(e => e.avgRating >= ratingMin);
+        }
       }
     }
-    
     res.json({ entrenadores: entrenadoresFiltrados });
 
   } catch (error) {
