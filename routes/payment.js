@@ -15,7 +15,7 @@ const sendEmail = require('../utils/sendEmail');
 // Ruta protegida para crear sesión de pago con Stripe Checkout
 router.post('/create-checkout-session', auth, async (req, res) => {
   const { serviceId, fechaInicio } = req.body;
-  const userId = req.user.userId;
+  const userId = req.user.userId; //Esto se obtiene del middleware auth
 
   if (!serviceId || !fechaInicio) {
     return res.status(400).json({ message: "Faltan datos: serviceId o fechaInicio" });
@@ -47,7 +47,7 @@ router.post('/create-checkout-session', auth, async (req, res) => {
       const ini = new Date(r.fechaInicio);
       // IMPORTANTE: asegurate que r.duracion esté bien guardada en la reserva
       const fin = new Date(ini.getTime() + (r.duracion || servicio.duracion) * 60000);
-      return ini < nuevaFin && fin > nuevaInicio;
+      return ini < nuevaFin && fin > nuevaInicio; //Valida que no se solapen, agarrando el inicio y fin de la reserva existente y viendo si esta fuera de rango de la que se quiere hacer
     });
 
     if (conflict) {

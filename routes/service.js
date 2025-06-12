@@ -395,7 +395,6 @@ function generarBloques(inicio, fin, duracionMin) {
     // Avanza a la siguiente hora
     actual = actual.add(duracion);
   }
-
   // No agregamos el último bloque si es igual a la hora final
   if (actual.format(formato) !== final.format(formato)) {
     bloques.push(actual.format(formato));
@@ -412,12 +411,12 @@ router.get('/:id/real-availability', async (req, res) => {
 
     // VALIDACIÓN DE FECHA PASADA
     const hoy = dayjs().utc().startOf('day');
-    const diaConsulta = dayjs(fecha).utc().startOf('day');
+    const diaConsulta = dayjs(fecha).utc().startOf('day'); // chequeas que la fecha no sea anterior a hoy
     if (diaConsulta.isBefore(hoy)) {
       return res.status(400).json({ error: 'No se puede consultar disponibilidad para fechas pasadas.' });
     }
 
-    const servicio = await Service.findById(req.params.id);
+    const servicio = await Service.findById(req.params.id); //Agarras el ID del servicio desde la URL y lo buscas
     if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
     // Obtener el nombre del día en español
@@ -429,7 +428,7 @@ router.get('/:id/real-availability', async (req, res) => {
 
     // Obtener las franjas de ese día
     const franjas = servicio.disponibilidad.get(nombreDia); 
-    console.log("Franjas para el día:", franjas);
+    console.log("Franjas para el día:", franjas); //Esto es simplemente la disponibilidad del servicio, que es un Map
 
     if (!franjas || franjas.length === 0) return res.json([]);
 
@@ -440,7 +439,7 @@ router.get('/:id/real-availability', async (req, res) => {
 
     console.log("Bloques totales generados:", bloquesTotales);
 
-    // Obtener las reservas para el servicio en la fecha solicitada
+    // Buscas las reservas del servicio en la fecha indicada
     const reservas = await Reserva.find({
       servicio: servicio._id,
       fechaInicio: { 
@@ -454,7 +453,7 @@ router.get('/:id/real-availability', async (req, res) => {
     const horariosReservados = reservas.map(r => dayjs(r.fechaInicio).utc().format('HH:mm'));
     console.log("Horarios reservados:", horariosReservados);
 
-    // Filtrar los bloques disponibles, excluyendo los reservados
+    // Filtrar los bloques disponibles, excluyendo los reservados en base a su fechaInicio
     const disponibles = bloquesTotales.filter(bloque => !horariosReservados.includes(bloque));
     console.log("Bloques disponibles después de filtrar:", disponibles);
 

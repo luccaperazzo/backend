@@ -50,7 +50,6 @@ app.get('/api/ping', (req, res) => {
 
 app.use('/uploads/documentos', express.static(__dirname + '/uploads/documentos'));
 
-
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ Conectado a MongoDB'))
