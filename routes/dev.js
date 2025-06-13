@@ -18,8 +18,8 @@ const trainersSeed = [
 ];
 
 const servicesSeed = [
-  { titulo: 'Entrenamiento Funcional', descripcion: 'Sesión de entrenamiento funcional', precio: 20, categoria: 'Entrenamiento', entrenadorEmail: 'carlos@test.com', duracion: 60, presencial: true, disponibilidad: { lunes: ['09:00', '10:00'], miercoles: ['14:00'] } },
-  { titulo: 'Yoga', descripcion: 'Clase de yoga para todos los niveles', precio: 15, categoria: 'Entrenamiento', entrenadorEmail: 'lucia@test.com', duracion: 60, presencial: false, disponibilidad: { martes: ['11:00'], jueves: ['16:00', '17:00'] } }
+  { titulo: 'Entrenamiento Funcional', descripcion: 'Sesión de entrenamiento funcional', precio: 20, categoria: 'Entrenamiento', entrenadorEmail: 'carlos@test.com', duracion: 60, presencial: true, disponibilidad: { Lunes: ['09:00', '10:00'], Miércoles: ['14:00'] } },
+  { titulo: 'Yoga', descripcion: 'Clase de yoga para todos los niveles', precio: 15, categoria: 'Entrenamiento', entrenadorEmail: 'lucia@test.com', duracion: 60, presencial: false, disponibilidad: { Martes: ['11:00'], Jueves: ['16:00', '17:00'] } }
 ];
 
 router.post('/seed', async (req, res) => {
