@@ -48,11 +48,10 @@ router.get('/:id', async (req, res) => {
 
     if (!entrenador) {
       return res.status(404).json({ error: 'Entrenador no encontrado' });
-    }
-
-    // 2. Busca el promedio de ratings en TrainerStats
+    }    // 2. Busca el promedio de ratings en TrainerStats
     const stats = await TrainerStats.findOne({ entrenador: entrenador._id });
     entrenador.avgRating = stats ? stats.avgRating : 0;
+    entrenador.totalRatings = stats ? stats.totalRatings : 0;
 
     // avatarUrl ya viene en el objeto entrenador
     res.json(entrenador);
