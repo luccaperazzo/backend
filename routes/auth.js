@@ -5,6 +5,8 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken'); 
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
 
 
 router.post('/register', async (req, res) => {
@@ -28,6 +30,21 @@ router.post('/register', async (req, res) => {
         error: 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula, un número y un carácter especial.'
       });
     }
+    //Basicamente, se chequea si la request viene con un archivo de imagen
+    let avatarUrl = null;
+    if (req.files && req.files.avatar) {
+      const file = req.files.avatar;
+      const ext = path.extname(file.name).toLowerCase();
+      if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) { // Verifica la extensión del archivo, que sea válida
+        return res.status(400).json({ error: 'Formato de imagen no permitido' });
+      }
+      const uploadDir = path.join(__dirname, '../uploads/perfiles'); // Se contstruye la ruta de subida y se guarda el file
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      const filename = `${Date.now()}_${file.name}`;
+      const savePath = path.join(uploadDir, filename);
+      await file.mv(savePath);
+      avatarUrl = `/uploads/perfiles/${filename}`;
+    }
 
     // Armar objeto de usuario
     const userData = {
@@ -36,13 +53,23 @@ router.post('/register', async (req, res) => {
       email,
       password,
       fechaNacimiento,
-      role
+      role,
+      avatarUrl
     };
 
     // Si es entrenador, agregar zona e idiomas
     if (role === 'entrenador') {
       userData.zona = zona;
-      userData.idiomas = idiomas;
+      // 👇 Parsear idiomas si viene como string (por FormData)
+      if (typeof idiomas === "string") {
+        try {
+          userData.idiomas = JSON.parse(idiomas);
+        } catch {
+          userData.idiomas = [];
+        }
+      } else {
+        userData.idiomas = idiomas;
+      }
       userData.presentacion = presentacion;
     }
 

@@ -14,7 +14,7 @@ router.get('/top-trainers', async (req, res) => {
     const topStats = await TrainerStats.find({}) //Si hay un trainer pero no tiene ratings, no lo traigo
       .sort({ avgRating: -1, totalRatings: -1 }) // Ordena por rating, luego más ratings
       .limit(3)
-      .populate('entrenador', 'nombre apellido presentacion zona idiomas'); // Trae solo estos campos del User
+      .populate('entrenador', 'nombre apellido presentacion zona idiomas avatarUrl'); // Trae solo estos campos del User
 
     // 2. Mapear para enviar los datos combinados
     const result = topStats.map(stats => ({
@@ -25,7 +25,8 @@ router.get('/top-trainers', async (req, res) => {
       zona: stats.entrenador.zona,
       idiomas: stats.entrenador.idiomas,
       avgRating: stats.avgRating,
-      totalRatings: stats.totalRatings
+      totalRatings: stats.totalRatings,
+      avatarUrl: stats.entrenador.avatarUrl || null // Añadir avatarUrl
     }));
 
     res.json(result);
@@ -53,6 +54,7 @@ router.get('/:id', async (req, res) => {
     const stats = await TrainerStats.findOne({ entrenador: entrenador._id });
     entrenador.avgRating = stats ? stats.avgRating : 0;
 
+    // avatarUrl ya viene en el objeto entrenador
     res.json(entrenador);
   } catch (err) {
     console.error('❌ Error al traer entrenador:', err);

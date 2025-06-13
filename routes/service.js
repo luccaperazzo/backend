@@ -228,11 +228,12 @@ router.get('/trainers', async (req, res) => {
     // === Nuevo bloque: para cada entrenador, traemos sus stats y le agregamos avgRating ===
     const entrenadoresConRating = await Promise.all(
       entrenadores.map(async trainer => {
-        // lo pasamos a objeto plano para poder añadirle propiedades
         const obj = trainer.toObject();
         const stats = await TrainerStats.findOne({ entrenador: trainer._id }).lean();
         obj.avgRating    = stats?.avgRating    ?? 0;
         obj.totalRatings = stats?.totalRatings ?? 0;
+        // Añadir avatarUrl si existe
+        obj.avatarUrl = trainer.avatarUrl || null; //para poder pasasrlo al frontend por el JSON
         return obj;
       })
     );

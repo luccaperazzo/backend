@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema({
   role:            { type: String, enum: ['cliente', 'entrenador'], default: 'cliente', required: [true, 'El rol es obligatorio.'] },
   resetToken: String,
   resetTokenExpires: Date,
+  avatarUrl: { type: String, default: null },
 
 
   // Campos exclusivos para entrenadores:
