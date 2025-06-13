@@ -137,7 +137,7 @@ router.post('/login', async (req, res) => {
       apellido: user.apellido,
       email: user.email,
       role: user.role,
-      // podés agregar lo que quieras, pero mínimo el role
+      avatarUrl: user.avatarUrl // <-- ahora se incluye el avatar
     }
   });
   } catch (err) {

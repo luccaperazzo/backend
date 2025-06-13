@@ -51,6 +51,10 @@ app.get('/api/ping', (req, res) => {
 app.use('/uploads/documentos', express.static(__dirname + '/uploads/documentos'));
 app.use('/uploads/perfiles', express.static(__dirname + '/uploads/perfiles'));
 
+// Ruta de desarrollo para poblar la base de datos
+const devRoutes = require('./routes/dev');
+app.use('/api/dev', devRoutes);
+
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ Conectado a MongoDB'))
