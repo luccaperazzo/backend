@@ -17,9 +17,39 @@ const trainersSeed = [
   { nombre: 'Lucía', apellido: 'Martínez', email: 'lucia@test.com', password: 'Test1234!', role: 'entrenador', presentacion: 'Especialista en fitness y bienestar integral.', zona: 'Belgrano', idiomas: ['Español'], fechaNacimiento: new Date('1988-07-22'), avatarUrl: 'https://media.istockphoto.com/id/856797530/photo/portrait-of-a-beautiful-woman-at-the-gym.jpg?s=612x612&w=0&k=20&c=0wMa1MYxt6HHamjd66d5__XGAKbJFDFQyu9LCloRsYU=' }
 ];
 
-const servicesSeed = [
-  { titulo: 'Entrenamiento Funcional', descripcion: 'Sesión de entrenamiento funcional', precio: 20, categoria: 'Entrenamiento', entrenadorEmail: 'carlos@test.com', duracion: 60, presencial: true, disponibilidad: { Lunes: ['09:00', '10:00'], Miércoles: ['14:00'] } },
-  { titulo: 'Yoga', descripcion: 'Clase de yoga para todos los niveles', precio: 15, categoria: 'Entrenamiento', entrenadorEmail: 'lucia@test.com', duracion: 60, presencial: false, disponibilidad: { Martes: ['11:00'], Jueves: ['16:00', '17:00'] } }
+const servicesSeed = [  { 
+    titulo: 'Entrenamiento Funcional', 
+    descripcion: 'Sesión de entrenamiento funcional', 
+    precio: 20, 
+    categoria: 'Entrenamiento', 
+    entrenadorEmail: 'carlos@test.com', 
+    duracion: 60, 
+    presencial: true,    disponibilidad: { 
+      Lunes: ['00:00', '23:00'],
+      Martes: ['00:00', '23:00'],
+      Miércoles: ['00:00', '23:00'],
+      Jueves: ['00:00', '23:00'],
+      Viernes: ['00:00', '23:00'],
+      Sábado: ['00:00', '23:00'],
+      Domingo: ['00:00', '23:00']
+    }
+  },{ 
+    titulo: 'Yoga', 
+    descripcion: 'Clase de yoga para todos los niveles', 
+    precio: 15, 
+    categoria: 'Entrenamiento', 
+    entrenadorEmail: 'lucia@test.com', 
+    duracion: 60, 
+    presencial: false,    disponibilidad: { 
+      Lunes: ['00:00', '23:00'],
+      Martes: ['00:00', '23:00'],
+      Miércoles: ['00:00', '23:00'],
+      Jueves: ['00:00', '23:00'],
+      Viernes: ['00:00', '23:00'],
+      Sábado: ['00:00', '23:00'],
+      Domingo: ['00:00', '23:00']
+    }
+  }
 ];
 
 router.post('/seed', async (req, res) => {
