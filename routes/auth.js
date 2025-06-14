@@ -116,7 +116,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: new RegExp('^' + email + '$', 'i') });
     if (!user) return res.status(400).json({ error: 'Credenciales inválidas' });
 
     const isMatch = await user.comparePassword(password);
