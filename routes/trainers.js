@@ -91,12 +91,10 @@ router.get('/', authMiddleware, async (req, res) => {
           apellido: entrenador.apellido
         });
       }
-    }
-
-    // 3. Buscar stats en lote
+    }    // 3. Buscar stats en lote
     const ids = Array.from(entrenadoresMap.keys());
     const stats = await TrainerStats.find({ entrenador: { $in: ids } })
-      .select('entrenador avgRating').lean();
+      .select('entrenador avgRating totalRatings').lean();
 
     // 4. Unir nombre, apellido y avgRating
     const entrenadores = ids.map(id => {
@@ -106,7 +104,8 @@ router.get('/', authMiddleware, async (req, res) => {
         _id: base._id,
         nombre: base.nombre,
         apellido: base.apellido,
-        avgRating: stat ? stat.avgRating : 0
+        avgRating: stat ? stat.avgRating : 0,
+        totalRatings: stat ? stat.totalRatings : 0
       };
     });
 
