@@ -15,15 +15,16 @@ const transitions = Object.freeze({
   Cancelado: {}
 });
 
+// Verifica si un usuario puede hacer una acción específica
 function canTransition(userRole, currentState, action) {
   const state = transitions[currentState];
   if (!state || !state[action]) return false;
-  const { role } = state[action];
-  return Array.isArray(role)
-    ? role.includes(userRole)
-    : role === userRole;
+  const { role } = state[action]; // extrae el rol de la acción específica
+  return Array.isArray(role) // Verifica si es un array o si es un string
+    ? role.includes(userRole) // verifica si el rol del usuario está en el array
+    : role === userRole; // verifica si el rol es el mismo
 }
-
+// Retorna el estado de destino despues de una acción
 function nextState(currentState, action) {
   return transitions[currentState]?.[action]?.to || null;
 }

@@ -61,12 +61,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-
+//Este endpoint permite ver todo los trainers con los que tenés sesiones confirmadas/finalizadas.
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.userId;
 
-    // 1. Buscar reservas relevantes
+    // 1. Buscar reservas en estado 'Aceptado' o 'Finalizado', junto al nombre y apellido del trainer
     const reservas = await Reserva.find({
       cliente: clienteId,
       estado: { $in: ['Aceptado', 'Finalizado'] }
@@ -79,7 +79,7 @@ router.get('/', authMiddleware, async (req, res) => {
       }
     });
 
-    // 2. Extraer IDs únicos y datos básicos
+    // 2. Recorres todas las reservas de antes y sacás los trainers no duplicados.
     const entrenadoresMap = new Map();
 
     for (const reserva of reservas) {
@@ -91,7 +91,7 @@ router.get('/', authMiddleware, async (req, res) => {
           apellido: entrenador.apellido
         });
       }
-    }    // 3. Buscar stats en lote
+    }    // 3. Agarrás los IDs de antes, los guardás en un array y buscás sus stats
     const ids = Array.from(entrenadoresMap.keys());
     const stats = await TrainerStats.find({ entrenador: { $in: ids } })
       .select('entrenador avgRating totalRatings').lean();

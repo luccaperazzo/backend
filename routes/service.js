@@ -303,7 +303,7 @@ router.get('/:id', async (req, res) => {
 
     // Buscar y devolver el servicio actualizado (sin esperar a que se actualicen las vistas en el doc retornado)
     const servicio = await Service.findById(req.params.id)
-      .populate('entrenador', 'nombre apellido email');
+      .populate('entrenador', 'nombre apellido email'); // EN BASE AL ID De entrenador, trae nombre, apellido y email
 
     if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
@@ -434,7 +434,7 @@ router.get('/:id/real-availability', async (req, res) => {
     if (!franjas || franjas.length === 0) return res.json([]);
 
     let bloquesTotales = [];
-    for (let [inicio, fin] of franjas) {
+    for (let [inicio, fin] of franjas) { //inicio y fin imagino que es la disponibilidad basicamente, el [08:00, 20:00] de un día por ejemplo
       bloquesTotales.push(...generarBloques(inicio, fin, servicio.duracion));
     }
 
