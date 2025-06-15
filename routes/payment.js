@@ -10,6 +10,11 @@ const Service = require("../models/Service");
 const Reserva = require("../models/Reserve");
 const sendEmail = require('../utils/sendEmail');
 
+// Helper function para formatear fechas en UTC
+const formatDateUTC = (date) => {
+  return new Date(date).toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
+};
+
 
 
 // Ruta protegida para crear sesión de pago con Stripe Checkout
@@ -144,7 +149,7 @@ router.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req
           <p>Hola ${entrenador.nombre},</p>
           <p>Has recibido una nueva reserva del cliente: <strong>${cliente}</strong>.</p>
           <p>Servicio: <strong>${servicio.titulo}</strong></p>
-          <p>Fecha de inicio: ${new Date(fechaInicio).toLocaleString()}</p>
+          <p>Fecha de inicio: ${formatDateUTC(fechaInicio)}</p>
           <p>Por favor, ingresa a la plataforma para aceptarla o rechazarla.</p>
         `;
 

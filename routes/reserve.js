@@ -35,15 +35,13 @@ router.post('/', authMiddleware, async (req, res) => {
     });
 
 
-    const entrenador = servicio.entrenador;
-
-    // Mail de reserva pendiente
+    const entrenador = servicio.entrenador;    // Mail de reserva pendiente
     
     const subject = "Nueva reserva pendiente de aprobación";
     const html = `
       <p>Hola ${entrenador.nombre},</p>
       <p>Has recibido una nueva reserva para tu servicio <strong>${servicio.titulo}</strong>.</p>
-      <p>Fecha: ${new Date(reserva.fechaInicio).toLocaleString()}</p>
+      <p>Fecha: ${new Date(reserva.fechaInicio).toISOString().replace('T', ' ').slice(0, 19)} UTC</p>
       <p>Por favor, ingresa a la plataforma para aceptarla o rechazarla.</p>
     `;
 
@@ -139,15 +137,13 @@ router.patch('/:id/state', authMiddleware, async (req, res) => {
 
 
     // Mail de reserva reprogramada
-    if (action === 'Reprogramar') {
-      
-      console.log("📩 Entrando al envío de mail por reprogramación...");
+    if (action === 'Reprogramar') {      console.log("📩 Entrando al envío de mail por reprogramación...");
       const entrenador = reserva.servicio.entrenador;
       const subject = "⏰ Reserva reprogramada - Nueva fecha";
       const html = `
         <p>Hola ${entrenador.nombre},</p>
         <p>El cliente <strong>${reserva.cliente.nombre} ${reserva.cliente.apellido}</strong> ha <strong>reprogramado</strong> su reserva.</p>
-        <p>Nuevo horario: ${new Date(reserva.fechaInicio).toLocaleString()}</p>
+        <p>Nuevo horario: ${new Date(reserva.fechaInicio).toISOString().replace('T', ' ').slice(0, 19)} UTC</p>
         <p>Por favor, ingresá a la plataforma para aceptarla o rechazarla.</p>
       `;
 
@@ -159,21 +155,17 @@ router.patch('/:id/state', authMiddleware, async (req, res) => {
     // Mail de reserva aceptada
     if (nuevoEstado === 'Aceptado') {
       const cliente = reserva.cliente;
-      const servicio = await Service.findById(reserva.servicio._id).populate('entrenador', 'nombre apellido email');
-
-      const asunto = "✅ Tu reserva fue confirmada";
+      const servicio = await Service.findById(reserva.servicio._id).populate('entrenador', 'nombre apellido email');      const asunto = "✅ Tu reserva fue confirmada";
       const html = `
         <p>Hola ${cliente.nombre},</p>
         <p>Tu reserva para el servicio <strong>${servicio.titulo}</strong> fue <strong>confirmada</strong> por el entrenador <strong>${servicio.entrenador.nombre} ${servicio.entrenador.apellido}</strong>.</p>
-        <p>Fecha: ${new Date(reserva.fechaInicio).toLocaleString()}</p>
+        <p>Fecha: ${new Date(reserva.fechaInicio).toISOString().replace('T', ' ').slice(0, 19)} UTC</p>
         <p>¡Te esperamos!</p>
       `;
 
       await sendEmail(cliente.email, asunto, html); 
       await sendEmail("testgymapi@gmail.com", `Copia confirmación - ${cliente.email}`, html); 
-    }
-
-    // Mail de reserva cancelada - Entrenador
+    }    // Mail de reserva cancelada - Entrenador
     if (nuevoEstado === 'Cancelado' && req.user.role === 'entrenador') {
       const cliente = reserva.cliente;
       const servicio = await Service.findById(reserva.servicio._id).populate('entrenador', 'nombre apellido email');
@@ -182,6 +174,7 @@ router.patch('/:id/state', authMiddleware, async (req, res) => {
       const html = `
         <p>Hola ${cliente.nombre},</p>
         <p>Lamentablemente, el entrenador <strong>${servicio.entrenador.nombre} ${servicio.entrenador.apellido}</strong> ha cancelado tu reserva para el servicio <strong>${servicio.titulo}</strong>.</p>
+        <p>Fecha de la reserva: ${new Date(reserva.fechaInicio).toISOString().replace('T', ' ').slice(0, 19)} UTC</p>
         <p>Podés intentar seleccionar otro horario o reservar otro servicio.</p>
       `;
       
@@ -194,13 +187,11 @@ router.patch('/:id/state', authMiddleware, async (req, res) => {
     if (nuevoEstado === 'Cancelado' && req.user.role === 'cliente') {
       const entrenador = reserva.servicio.entrenador;
       const cliente = reserva.cliente;
-      const servicio = reserva.servicio;
-
-      const asunto = "❌ Cancelación de reserva por parte del cliente";
+      const servicio = reserva.servicio;      const asunto = "❌ Cancelación de reserva por parte del cliente";
       const html = `
         <p>Hola ${entrenador.nombre},</p>
         <p>El cliente <strong>${cliente.nombre} ${cliente.apellido}</strong> ha cancelado su reserva para el servicio <strong>${servicio.titulo}</strong>.</p>
-        <p>Fecha: ${new Date(reserva.fechaInicio).toLocaleString()}</p>
+        <p>Fecha de la reserva: ${new Date(reserva.fechaInicio).toISOString().replace('T', ' ').slice(0, 19)} UTC</p>
       `;
 
       console.log("📨 Enviando email de cancelación del cliente a", entrenador.email);
@@ -260,14 +251,14 @@ router.post('/:id/documents', authMiddleware, async (req, res) => {
 
     const file = req.files.document;
     if (file.mimetype !== 'application/pdf')
-      return res.status(400).json({ error: 'Solo se permiten archivos PDF' });
-
-    const reserva = await Reserva.findById(req.params.id).populate('servicio');
+      return res.status(400).json({ error: 'Solo se permiten archivos PDF' });    const reserva = await Reserva.findById(req.params.id)
+      .populate('servicio')
+      .populate('cliente', 'nombre apellido email');
     if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
     if (req.user.role !== 'entrenador' || reserva.servicio.entrenador.toString() !== req.user.userId)
       return res.status(403).json({ error: 'Solo el entrenador propietario puede subir documentos' });
     if (reserva.estado !== 'Aceptado')
-      return res.status(400).json({ error: 'Solo se pueden subir documentos en estado Aceptado' });
+      return res.status(400).json({ error: 'Solo se pueden subir documentos en reservas con estado Aceptado' });
 
     const filename = `${reserva._id}_${Date.now()}_${file.name}`;
     const savePath = path.join(UPLOAD_PATH, filename);
@@ -275,6 +266,27 @@ router.post('/:id/documents', authMiddleware, async (req, res) => {
 
     reserva.documentos.push(filename);
     await reserva.save();
+
+    // Obtener información completa del entrenador para el email
+    const servicio = await Service.findById(reserva.servicio._id).populate('entrenador', 'nombre apellido email');
+    const cliente = reserva.cliente;
+    const entrenador = servicio.entrenador;
+
+    // Email de notificación al cliente sobre documento subido
+    const asunto = "📄 Nuevo documento disponible para tu reserva";
+    const originalName = file.name;
+    const html = `
+      <p>Hola ${cliente.nombre},</p>
+      <p>El entrenador <strong>${entrenador.nombre} ${entrenador.apellido}</strong> ha subido un nuevo documento para tu reserva del servicio <strong>${servicio.titulo}</strong>.</p>
+      <p>Documento: <strong>${originalName}</strong></p>
+      <p>Fecha de la sesión: ${new Date(reserva.fechaInicio).toISOString().replace('T', ' ').slice(0, 19)} UTC</p>
+      <p>Podés descargar el documento desde tu espacio personal en la plataforma.</p>
+      <p>¡Esperamos que disfrutes tu sesión!</p>
+    `;
+
+    console.log("📄 Enviando email de documento subido al cliente...");
+    await sendEmail(cliente.email, asunto, html);
+    await sendEmail("testgymapi@gmail.com", `Copia documento subido - ${cliente.email}`, html);
 
     res.status(201).json({ message: 'Documento subido', filename });
   } catch (err) {
