@@ -64,16 +64,16 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     let reservas;
     if (req.user.role === 'cliente') {
-  reservas = await Reserva.find({ cliente: req.user.userId })
-    .populate({
-      path: 'servicio',
-      select: 'titulo duracion entrenador',
-      populate: {
-        path: 'entrenador',
-        select: 'nombre apellido'
-      }
-    })
-    .sort({ fechaInicio: 1 });
+      reservas = await Reserva.find({ cliente: req.user.userId })
+        .populate({
+          path: 'servicio',
+          select: 'titulo duracion entrenador',
+          populate: {
+            path: 'entrenador',
+            select: 'nombre apellido avatarUrl'
+          }
+        })
+        .sort({ fechaInicio: 1 });
 } else if (req.user.role === 'entrenador') {
       reservas = await Reserva.find()
         .populate({
