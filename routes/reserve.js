@@ -73,7 +73,7 @@ router.get('/', authMiddleware, async (req, res) => {
         select: 'nombre apellido'
       }
     })
-    .sort({ fechaInicio: -1 });
+    .sort({ fechaInicio: 1 });
 } else if (req.user.role === 'entrenador') {
       reservas = await Reserva.find()
         .populate({
@@ -82,7 +82,7 @@ router.get('/', authMiddleware, async (req, res) => {
           select: 'titulo duracion'
         })
         .populate('cliente', 'nombre apellido email')
-        .sort({ fechaInicio: -1 });
+        .sort({ fechaInicio: 1 });
       reservas = reservas.filter(r => r.servicio);
     } else {
       return res.status(403).json({ error: 'Rol no autorizado' });
