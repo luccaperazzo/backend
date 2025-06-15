@@ -61,12 +61,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-//Este endpoint permite ver todo los trainers con los que tenés sesiones confirmadas/finalizadas.
+
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const clienteId = req.user.userId;
-
-    // 1. Buscar reservas en estado 'Aceptado' o 'Finalizado', junto al nombre y apellido del trainer
+    const clienteId = req.user.userId;    // 1. Buscar reservas relevantes
     const reservas = await Reserva.find({
       cliente: clienteId,
       estado: { $in: ['Aceptado', 'Finalizado'] }
@@ -75,11 +73,11 @@ router.get('/', authMiddleware, async (req, res) => {
       select: 'entrenador',
       populate: {
         path: 'entrenador',
-        select: 'nombre apellido'
+        select: 'nombre apellido avatarUrl'
       }
     });
 
-    // 2. Recorres todas las reservas de antes y sacás los trainers no duplicados.
+    // 2. Extraer IDs únicos y datos básicos
     const entrenadoresMap = new Map();
 
     for (const reserva of reservas) {
@@ -88,15 +86,16 @@ router.get('/', authMiddleware, async (req, res) => {
         entrenadoresMap.set(String(entrenador._id), {
           _id: entrenador._id,
           nombre: entrenador.nombre,
-          apellido: entrenador.apellido
+          apellido: entrenador.apellido,
+          avatarUrl: entrenador.avatarUrl
         });
       }
-    }    // 3. Agarrás los IDs de antes, los guardás en un array y buscás sus stats
+    }
+
+    // 3. Buscar stats en lote
     const ids = Array.from(entrenadoresMap.keys());
     const stats = await TrainerStats.find({ entrenador: { $in: ids } })
-      .select('entrenador avgRating totalRatings').lean();
-
-    // 4. Unir nombre, apellido y avgRating
+      .select('entrenador avgRating').lean();    // 4. Unir nombre, apellido y avgRating
     const entrenadores = ids.map(id => {
       const base = entrenadoresMap.get(id);
       const stat = stats.find(s => String(s.entrenador) === id);
@@ -104,6 +103,7 @@ router.get('/', authMiddleware, async (req, res) => {
         _id: base._id,
         nombre: base.nombre,
         apellido: base.apellido,
+        avatarUrl: base.avatarUrl,
         avgRating: stat ? stat.avgRating : 0,
         totalRatings: stat ? stat.totalRatings : 0
       };
