@@ -5,7 +5,7 @@ const BARRIOS_CABA = [
   "Almagro", "Balvanera", "Barracas", "Belgrano", "Boedo",
   "Caballito", "Chacarita", "Coghlan", "Colegiales", "Constitución",
   "Flores", "Floresta", "La Boca", "La Paternal", "Liniers", "Mataderos",
-  "Monserrat", "Monte Castro", "Nueva Pompeya", "Nuñez", "Palermo",
+  "Monserrat", "Monte Castro", "Nueva Pompeya", "Núñez", "Palermo",
   "Parque Avellaneda", "Parque Chacabuco", "Parque Chas", "Parque Patricios",
   "Puerto Madero", "Recoleta", "Retiro", "Saavedra", "San Cristóbal",
   "San Nicolás", "San Telmo", "Vélez Sarsfield", "Versalles", "Villa Crespo",
