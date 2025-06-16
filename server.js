@@ -14,7 +14,11 @@ app.use(cors());
 app.use("/api/payment/webhook", bodyParser.raw({ type: "application/json" }));
 
 app.use(express.json());
-app.use(fileUpload());
+app.use(fileUpload({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB límite
+  abortOnLimit: true,
+  responseOnLimit: "Archivo demasiado grande. Máximo 5MB permitido."
+}));
 
 // Rutas de autenticación
 const authRoutes    = require('./routes/auth');

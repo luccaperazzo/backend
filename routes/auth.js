@@ -29,11 +29,16 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ 
         error: 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula, un número y un carácter especial.'
       });
-    }
-    //Basicamente, se chequea si la request viene con un archivo de imagen
+    }    //Basicamente, se chequea si la request viene con un archivo de imagen
     let avatarUrl = null;
     if (req.files && req.files.avatar) {
       const file = req.files.avatar;
+      
+      // Validar tamaño del archivo (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ error: 'La imagen debe ser menor a 5MB' });
+      }
+      
       const ext = path.extname(file.name).toLowerCase();
       if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) { // Verifica la extensión del archivo, que sea válida
         return res.status(400).json({ error: 'Formato de imagen no permitido' });

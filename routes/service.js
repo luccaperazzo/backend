@@ -2,9 +2,9 @@ const Joi = require('joi');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const duration = require('dayjs/plugin/duration'); // Importa el plugin de duración
-dayjs.extend(duration); // Extiende dayjs con el plugin de duraciónconst express = require('express');
-dayjs.extend(utc);
+dayjs.extend(duration); // Extiende dayjs con el plugin de duración
 const express = require('express');
+dayjs.extend(utc);
 const router = express.Router();
 const Service = require('../models/Service');
 const authMiddleware = require('../middleware/authMiddleware');

@@ -18,9 +18,22 @@ const IDIOMAS_ENUM = ["Español", "Inglés", "Portugués"];
 
 
 const userSchema = new mongoose.Schema({
-  nombre:          { type: String, required: [true, 'El nombre es obligatorio.'] },
-  apellido:        { type: String, required: [true, 'El apellido es obligatorio.'] },
-  email:           { type: String, required: [true, 'El email es obligatorio.'], unique: true },
+  nombre:          { 
+    type: String, 
+    required: [true, 'El nombre es obligatorio.'],
+    maxlength: [50, 'El nombre no puede superar los 50 caracteres.']
+  },
+  apellido:        { 
+    type: String, 
+    required: [true, 'El apellido es obligatorio.'],
+    maxlength: [50, 'El apellido no puede superar los 50 caracteres.']
+  },
+  email:           { 
+    type: String, 
+    required: [true, 'El email es obligatorio.'], 
+    unique: true,
+    maxlength: [100, 'El email no puede superar los 100 caracteres.']
+  },
   password:        { type: String, required: [true, 'La contraseña es obligatoria.'] },
   fechaNacimiento: { 
     type: Date,   
@@ -46,12 +59,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: BARRIOS_CABA,
     required: [function() { return this.role === 'entrenador'; }, 'La zona es obligatoria para entrenadores.']
-  },
-  presentacion: {
+  },  presentacion: {
     type: String,
     required: [function() { return this.role === 'entrenador'; }, 'La presentación es obligatoria para entrenadores.'],
     minlength: [10, 'La presentación debe tener al menos 10 caracteres.'],
-    maxlength: [500, 'La presentación no puede superar los 200 caracteres.']
+    maxlength: [200, 'La presentación no puede superar los 200 caracteres.']
   },
   idiomas: {
     type: [String],
