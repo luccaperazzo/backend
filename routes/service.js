@@ -2,9 +2,9 @@ const Joi = require('joi');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const duration = require('dayjs/plugin/duration'); // Importa el plugin de duración
-dayjs.extend(duration); // Extiende dayjs con el plugin de duración
-const express = require('express');
+dayjs.extend(duration); // Extiende dayjs con el plugin de duraciónconst express = require('express');
 dayjs.extend(utc);
+const express = require('express');
 const router = express.Router();
 const Service = require('../models/Service');
 const authMiddleware = require('../middleware/authMiddleware');
@@ -166,15 +166,15 @@ router.get('/trainers', async (req, res) => {
 
     // ====== Filtro de servicios ======
     let servicioFiltro = {
-      publicado: true, // Siempre va a traer trainers con al menos 1 servicio publicado
-      ...(categoria && { categoria }), // solo uno
-      ...(precioMax && { precio: { $lte: parseFloat(precioMax) } }),
-      ...(duracion && [30,45,60,90].includes(Number(duracion)) && { duracion: Number(duracion) }),
+      publicado: true, // Solo muestra servicios que el trainer ha marcado como públicos
+      ...(categoria && { categoria }), // solo se aplica si viene el parámetro categoría, si viene se aplica el filtro de categoria
+      ...(precioMax && { precio: { $lte: parseFloat(precioMax) } }), // Solo se aplica si viene precioMax, <  precioMax
+      ...(duracion && [30,45,60,90].includes(Number(duracion)) && { duracion: Number(duracion) }), //Primero verifica que duracion exista, luego que sea uno de los valores válidos y luego trata de aplicar el filtro
     };
 
     // Filtrado presencial/virtual/ambos (campo booleano)
     if (presencial === 'presencial') {
-      servicioFiltro.presencial = true; //Parece que se le pasas de forma indirecta
+      servicioFiltro.presencial = true;
     } else if (presencial === 'virtual') {
       servicioFiltro.presencial = false;
     }
@@ -183,7 +183,7 @@ router.get('/trainers', async (req, res) => {
     // ====== Buscar servicios ======
     const servicios = await Service.find(servicioFiltro);
     if (servicios.length === 0) {
-      return res.json({ entrenadores: [] }); // Si no hay servicios , termina acá el codigo
+      return res.json({ entrenadores: [] });
     }
     // IDs de entrenadores
     const idsEntrenadores = [...new Set(servicios.map(s => s.entrenador.toString()))];
@@ -194,7 +194,7 @@ router.get('/trainers', async (req, res) => {
       "Almagro", "Balvanera", "Barracas", "Belgrano", "Boedo",
       "Caballito", "Chacarita", "Coghlan", "Colegiales", "Constitución",
       "Flores", "Floresta", "La Boca", "La Paternal", "Liniers", "Mataderos",
-      "Monserrat", "Monte Castro", "Nueva Pompeya", "Núñez", "Palermo",
+      "Monserrat", "Monte Castro", "Nueva Pompeya", "Nuñez", "Palermo",
       "Parque Avellaneda", "Parque Chacabuco", "Parque Chas", "Parque Patricios",
       "Puerto Madero", "Recoleta", "Retiro", "Saavedra", "San Cristóbal",
       "San Nicolás", "San Telmo", "Vélez Sarsfield", "Versalles", "Villa Crespo",
@@ -213,49 +213,40 @@ router.get('/trainers', async (req, res) => {
     let idiomasFiltro = undefined;
     if (idioma) {
       // Puede venir como string separado por coma o como array
-      let idiomasArray = Array.isArray(idioma) ? idioma : idioma.split(',').map(i => i.trim());
+      let idiomasArray = Array.isArray(idioma) ? idioma : idioma.split(',').map(i => i.trim()); // Si viene en array lo dejo como esta y si viene como string lo separo por coma
       // Solo aceptamos valores válidos
       const idiomasValidos = ["Español", "Inglés", "Portugués"];
-      idiomasArray = idiomasArray.filter(idm => idiomasValidos.includes(idm)); //SACO LOS IDIOMAS QUE NO CORRESPONDEN AL ENUM, MEDIO AL PEDO YA QUE DESDE EL FRONT ES IMPOSIBLE PASAR UN VALOR Q NO SEA UNO DE ESTOS
+      idiomasArray = idiomasArray.filter(idm => idiomasValidos.includes(idm));
       if (idiomasArray.length) {
-        userFiltro.idiomas = { $in: idiomasArray }; // Enrenadores que tengan al menos 1 idioma
+        userFiltro.idiomas = { $in: idiomasArray };
       }
     }
 
     // ====== Buscar entrenadores ======
     const entrenadores = await User.find(userFiltro).select('-password');
-      // === Nuevo bloque: para cada entrenador, traemos sus stats y le agregamos avgRating ===
+    
+    // === Nuevo bloque: para cada entrenador, traemos sus stats y le agregamos avgRating ===
     const entrenadoresConRating = await Promise.all(
       entrenadores.map(async trainer => {
         const obj = trainer.toObject();
         const stats = await TrainerStats.findOne({ entrenador: trainer._id }).lean();
-        obj.avgRating    = stats?.avgRating    ?? 0; // Si stats es undefined, avgRating será 0
-        obj.totalRatings = stats?.totalRatings ?? 0; // Si stats es undefined, totalRatings será 0
+        obj.avgRating    = stats?.avgRating    ?? 0;
+        obj.totalRatings = stats?.totalRatings ?? 0;
         // Añadir avatarUrl si existe
-        obj.avatarUrl = trainer.avatarUrl || null; //para poder pasarlo al frontend por el JSON
-        
-        // 🔥 NUEVO: Traer los servicios del entrenador que coinciden con los filtros
-        const serviciosDelEntrenador = servicios.filter(s => s.entrenador.toString() === trainer._id.toString());
-        obj.servicios = serviciosDelEntrenador;
-        
+        obj.avatarUrl = trainer.avatarUrl || null; //para poder pasasrlo al frontend por el JSON
         return obj;
       })
     );
-      // Filtrar por rating mínimo si se especificó
+    
+    // Filtrar por rating mínimo si se especificó
     let entrenadoresFiltrados = entrenadoresConRating;
-    if (rating && rating !== "") { //Esta linea verifica la existencia de rating y que no sea un string vacío
+    if (rating && rating !== "") {
       if (rating === "5+") {
         entrenadoresFiltrados = entrenadoresConRating.filter(e => e.avgRating === 5);
       } else {
         const ratingMin = parseInt(rating);
         if (!isNaN(ratingMin) && ratingMin >= 1 && ratingMin <= 5) {
-          // OPCIÓN 1: Comportamiento actual (restrictivo) - solo entrenadores con ratings
           entrenadoresFiltrados = entrenadoresConRating.filter(e => e.avgRating >= ratingMin);
-          
-          // OPCIÓN 2: Incluir entrenadores sin ratings en rating=1 (comentado)
-          // entrenadoresFiltrados = entrenadoresConRating.filter(e => 
-          //   e.avgRating >= ratingMin || (e.totalRatings === 0 && ratingMin === 1)
-          // );
         }
       }
     }
