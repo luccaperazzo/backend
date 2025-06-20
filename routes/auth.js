@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const authMiddleware = require('../middleware/authMiddleware');
 
 
 router.post('/register', async (req, res) => {
@@ -213,6 +214,24 @@ router.post('/reset-password', async (req, res) => {
 
   res.json({ message: 'Contraseña actualizada con éxito' });
 });
+
+// Obtener datos del usuario autenticado
+router.get('/me', authMiddleware, async (req, res) => {
+    try {
+      const { userId } = req.user;
+
+      const user = await User.findById(userId).select('-password');
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      res.json(user);
+    } catch (err) {
+      console.error('❌ Error en /api/auth/me:', err);
+      res.status(500).json({ error: 'Error al obtener datos del usuario' });
+    }
+});
+
 module.exports = router;
 
 
