@@ -15,6 +15,10 @@ cron.schedule('* * * * *', async () => {
         console.warn(`Reserva ${r._id} sin fechaInicio → omitida`);
         continue;
       }
+      if (!r.servicio) {
+        console.warn(`Reserva ${r._id} tiene el servicio eliminado`);
+        continue;
+      }
       // calculamos fin = inicio + duracion (minutos → ms)
       const finServicio = r.fechaInicio.getTime() + (r.servicio.duracion * 60_000);
 
