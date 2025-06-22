@@ -86,7 +86,65 @@ router.post('/create', authMiddleware, async (req, res) => {
   const { titulo, descripcion, precio, categoria, duracion, presencial, disponibilidad,vistas } = value;
 
   try {
-    // 0️⃣ Validar que cada bloque cumpla la duración
+
+    // Validación bis: solapamiento interno en los bloques de cada día
+    // -----------------------------
+    // disponibilidad podría ser un objeto plain { Lunes: [ ["10:00","12:00"], ... ], ... }
+    const disponibilidadMap = disponibilidad instanceof Map
+      ? disponibilidad
+      : new Map(Object.entries(disponibilidad));
+
+    for (const [dia, bloques] of disponibilidadMap.entries()) {
+      
+      if (!Array.isArray(bloques)) {
+        return res.status(400).json({ error: `Formato inválido en disponibilidad para ${dia}.` });
+      }
+      
+      const bloquesConMinutos = [];
+      for (const bloque of bloques) {
+        if (!Array.isArray(bloque) || bloque.length !== 2) {
+          return res.status(400).json({ error: `Cada bloque en ${dia} debe ser un array [inicio, fin].` });
+        }
+        const [inicioStr, finStr] = bloque;
+        
+        const [h1, m1] = inicioStr.split(':').map(Number);
+        const [h2, m2] = finStr.split(':').map(Number);
+        if (
+          Number.isNaN(h1) || Number.isNaN(m1) ||
+          Number.isNaN(h2) || Number.isNaN(m2) ||
+          h1 < 0 || h1 > 23 || m1 < 0 || m1 > 59 ||
+          h2 < 0 || h2 > 23 || m2 < 0 || m2 > 59
+        ) {
+          return res.status(400).json({ error: `Formato de hora inválido en ${dia}: "${inicioStr}" o "${finStr}". Debe ser "HH:MM".` });
+        }
+        const minutosInicio = h1 * 60 + m1;
+        const minutosFin    = h2 * 60 + m2;
+        if (minutosFin <= minutosInicio) {
+          return res.status(400).json({ error: `En ${dia}, el inicio (${inicioStr}) debe ser anterior al fin (${finStr}).` });
+        }
+        bloquesConMinutos.push({
+          inicioMin: minutosInicio,
+          finMin: minutosFin,
+          inicioStr,
+          finStr
+        });
+      }
+      
+      bloquesConMinutos.sort((a, b) => a.inicioMin - b.inicioMin);
+      
+      for (let i = 1; i < bloquesConMinutos.length; i++) {
+        const prev = bloquesConMinutos[i - 1];
+        const curr = bloquesConMinutos[i];
+        
+        if (curr.inicioMin < prev.finMin) {
+          return res.status(400).json({
+            error: `Conflicto interno en ${dia}: el bloque ${curr.inicioStr}-${curr.finStr} se solapa con ${prev.inicioStr}-${prev.finStr}.`
+          });
+        }
+      }
+    }
+
+    // Validar que cada bloque cumpla la duración
     for (const [dia, bloques] of Object.entries(disponibilidad)) {
       for (const [inicio, fin] of bloques) {
         const [h1, m1] = inicio.split(':').map(Number);
@@ -108,7 +166,7 @@ router.post('/create', authMiddleware, async (req, res) => {
       }
     }
 
-    // 1️⃣ Verificar solapamiento con otros servicios del mismo entrenador
+    // Verificar solapamiento con otros servicios del mismo entrenador
     const otrosServicios = await Service.find({ entrenador: req.user.userId });
 
     for (const otro of otrosServicios) {
