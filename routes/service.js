@@ -352,6 +352,17 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (servicio.entrenador.toString() !== req.user.userId) {
       return res.status(403).json({ error: 'No autorizado' });
     }
+    const reservasActivas = await Reserva.find({
+      servicio: req.params.id,
+      estado: { $in: ['Pendiente', 'Aceptado'] }
+    });
+
+    if (reservasActivas.length > 0) {
+      return res.status(400).json({
+        error: 'No se puede eliminar el servicio porque tiene reservas activas (pendientes o aceptadas).'
+      });
+    }
+    
     await Service.findByIdAndDelete(req.params.id);
     res.json({ message: 'Servicio eliminado' });
   } catch (err) {
