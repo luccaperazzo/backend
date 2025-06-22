@@ -33,7 +33,7 @@ const trainersSeed = [
     zona: 'Palermo', 
     idiomas: ['Español', 'Inglés'], 
     fechaNacimiento: new Date('1985-03-15'), 
-    avatarUrl: '/uploads/perfiles/1750109450195_trainer.jpg' 
+    avatarUrl: 'https://images.unsplash.com/photo-1604480133435-25b86862d276?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' 
   },
   { 
     nombre: 'Lucía', 
@@ -428,16 +428,94 @@ const servicesSeed = [
     }  }
 ];
 
+// Datos de reservas finalizadas para cada entrenador (una por entrenador)
+const reservesSeed = [
+  {
+    clienteEmail: 'juan@test.com',
+    servicioTitulo: 'Entrenamiento Funcional Intensivo',
+    fechaInicio: new Date('2024-12-15T10:00:00.000Z'),
+    estado: 'Aceptado',
+    fechareserva: new Date('2024-12-10T15:30:00.000Z'),
+    documentos: ['entrenamiento_plan_juan.pdf']
+  },
+  {
+    clienteEmail: 'ana@test.com',
+    servicioTitulo: 'Consulta Nutricional Inicial',
+    fechaInicio: new Date('2024-12-18T11:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-12T09:15:00.000Z'),
+    documentos: ['plan_nutricional_ana.pdf', 'menu_semanal.pdf']
+  },
+  {
+    clienteEmail: 'maria@test.com',
+    servicioTitulo: 'Entrenamiento CrossFit',
+    fechaInicio: new Date('2024-12-20T08:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-14T16:45:00.000Z'),
+    documentos: ['rutina_crossfit_maria.pdf']
+  },
+  {
+    clienteEmail: 'pedro@test.com',
+    servicioTitulo: 'Clase de Yoga Hatha',
+    fechaInicio: new Date('2024-12-17T09:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-11T20:30:00.000Z'),
+    documentos: ['guia_posturas_yoga.pdf']
+  },
+  {
+    clienteEmail: 'laura@test.com',
+    servicioTitulo: 'Rehabilitación Deportiva',
+    fechaInicio: new Date('2024-12-19T14:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-13T11:20:00.000Z'),
+    documentos: ['ejercicios_rehabilitacion.pdf', 'evaluacion_inicial.pdf']
+  },
+  {
+    clienteEmail: 'carlossanchez@test.com',
+    servicioTitulo: 'Entrenamiento Femenino Personalizado',
+    fechaInicio: new Date('2024-12-16T11:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-09T14:10:00.000Z'),
+    documentos: ['plan_personalizado_carlos.pdf']
+  },
+  {
+    clienteEmail: 'sofialopez@test.com',
+    servicioTitulo: 'Plan de Pérdida de Peso',
+    fechaInicio: new Date('2024-12-21T15:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-15T08:45:00.000Z'),
+    documentos: ['plan_perdida_peso.pdf', 'registro_alimentos.pdf']
+  },
+  {
+    clienteEmail: 'diegofernandez@test.com',
+    servicioTitulo: 'Entrenamiento con TRX',
+    fechaInicio: new Date('2024-12-22T10:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-16T19:15:00.000Z'),
+    documentos: ['manual_trx_basico.pdf']
+  },
+  {
+    clienteEmail: 'valentinatorres@test.com',
+    servicioTitulo: 'Entrenamiento de Running',
+    fechaInicio: new Date('2024-12-23T07:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-17T12:30:00.000Z'),
+    documentos: ['plan_running_principiante.pdf', 'tecnica_carrera.pdf']
+  },
+  {
+    clienteEmail: 'martin@test.com',
+    servicioTitulo: 'Coaching de Vida Saludable',
+    fechaInicio: new Date('2024-12-24T13:00:00.000Z'),
+    estado: 'Finalizado',
+    fechareserva: new Date('2024-12-18T17:20:00.000Z'),
+    documentos: ['guia_habitos_saludables.pdf']
+  }
+];
+
 // Datos de reseñas para cada entrenador con fechas para probar formateaTiempo
 const ahora = new Date();
-const reviewsSeed = [  // RESEÑAS PARA TESTING DE FORMATO DE TIEMPO - Carlos López (carlos@test.com)
-  {
-    entrenadorEmail: 'carlos@test.com',
-    clienteEmail: 'juan@test.com',
-    rating: 5,
-    texto: 'Carlos es increíble! Me ayudó a transformar completamente mi físico en 6 meses. Sus rutinas son intensas pero muy efectivas.',
-    fecha: new Date(ahora.getTime() - 30 * 1000) // 30 segundos atrás
-  },
+const reviewsSeed = [// RESEÑAS PARA TESTING DE FORMATO DE TIEMPO - Carlos López (carlos@test.com)
+
   {
     entrenadorEmail: 'carlos@test.com',
     clienteEmail: 'ana@test.com',
@@ -800,14 +878,14 @@ const reviewsSeed = [  // RESEÑAS PARA TESTING DE FORMATO DE TIEMPO - Carlos L�
 ];
 
 router.post('/seed', async (req, res) => {
-  try {
-    console.log('🌱 Iniciando proceso de seeding...');
-      const userCount = await User.countDocuments();
+  try {    console.log('🌱 Iniciando proceso de seeding...');
+    const userCount = await User.countDocuments();
     const trainerCount = await Trainer.countDocuments();
     const serviceCount = await Service.countDocuments();
     const ratingCount = await Rating.countDocuments();
+    const reserveCount = await Reserve.countDocuments();
 
-    if (userCount > 0 || trainerCount > 0 || serviceCount > 0 || ratingCount > 0) {
+    if (userCount > 0 || trainerCount > 0 || serviceCount > 0 || ratingCount > 0 || reserveCount > 0) {
       return res.status(400).json({ message: 'La base de datos ya tiene datos.' });
     }
 
@@ -968,13 +1046,44 @@ router.post('/seed', async (req, res) => {
         createdAt: r.fecha
       };
     }).filter(r => r.entrenador && r.cliente); // Solo insertar reseñas con IDs válidos
-    
-    try {
+      try {
       await Rating.insertMany(reviewsToInsert);
       console.log(`✅ ${reviewsToInsert.length} reseñas creadas`);
     } catch (reviewError) {
       console.error('❌ Error creando reseñas:', reviewError.message);
       throw reviewError;
+    }
+
+    // Crear reservas finalizadas, asociando los ObjectIds correctos
+    console.log(`📋 Creando ${reservesSeed.length} reservas finalizadas...`);
+    const createdServices = await Service.find({});
+    const reservesToInsert = reservesSeed.map(r => {
+      const clienteUser = createdUsers.find(u => u.email === r.clienteEmail);
+      const servicio = createdServices.find(s => s.titulo === r.servicioTitulo);
+      
+      if (!clienteUser) {
+        console.warn(`⚠️ No se encontró cliente para reserva: ${r.clienteEmail}`);
+      }
+      if (!servicio) {
+        console.warn(`⚠️ No se encontró servicio para reserva: ${r.servicioTitulo}`);
+      }
+        
+      return {
+        cliente: clienteUser ? clienteUser._id : null,
+        servicio: servicio ? servicio._id : null,
+        fechareserva: r.fechareserva,
+        fechaInicio: r.fechaInicio,
+        estado: r.estado,
+        documentos: r.documentos
+      };
+    }).filter(r => r.cliente && r.servicio); // Solo insertar reservas con IDs válidos
+    
+    try {
+      await Reserve.insertMany(reservesToInsert);
+      console.log(`✅ ${reservesToInsert.length} reservas finalizadas creadas`);
+    } catch (reserveError) {
+      console.error('❌ Error creando reservas:', reserveError.message);
+      throw reserveError;
     }
 
     console.log('🎉 Seeding completado exitosamente!');
