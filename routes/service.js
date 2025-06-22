@@ -13,6 +13,7 @@ const diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sáb
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 const Reserva = require('../models/Reserve');  // Asegúrate de que la ruta sea correcta
 const TrainerStats = require('../models/TrainerStats'); // ajustá la ruta si es necesario
+const { validarDisponibilidadInterna, validarDuracionBloques, validarSolapamientoConOtros } = require('../middleware/availabilityValidator');
 
 
 // 🔸 Joi Schema
@@ -87,102 +88,24 @@ router.post('/create', authMiddleware, async (req, res) => {
 
   try {
 
-    // Validación bis: solapamiento interno en los bloques de cada día
-    // -----------------------------
-    // disponibilidad podría ser un objeto plain { Lunes: [ ["10:00","12:00"], ... ], ... }
-    const disponibilidadMap = disponibilidad instanceof Map
-      ? disponibilidad
-      : new Map(Object.entries(disponibilidad));
-
-    for (const [dia, bloques] of disponibilidadMap.entries()) {
-      
-      if (!Array.isArray(bloques)) {
-        return res.status(400).json({ error: `Formato inválido en disponibilidad para ${dia}.` });
-      }
-      
-      const bloquesConMinutos = [];
-      for (const bloque of bloques) {
-        if (!Array.isArray(bloque) || bloque.length !== 2) {
-          return res.status(400).json({ error: `Cada bloque en ${dia} debe ser un array [inicio, fin].` });
-        }
-        const [inicioStr, finStr] = bloque;
-        
-        const [h1, m1] = inicioStr.split(':').map(Number);
-        const [h2, m2] = finStr.split(':').map(Number);
-        if (
-          Number.isNaN(h1) || Number.isNaN(m1) ||
-          Number.isNaN(h2) || Number.isNaN(m2) ||
-          h1 < 0 || h1 > 23 || m1 < 0 || m1 > 59 ||
-          h2 < 0 || h2 > 23 || m2 < 0 || m2 > 59
-        ) {
-          return res.status(400).json({ error: `Formato de hora inválido en ${dia}: "${inicioStr}" o "${finStr}". Debe ser "HH:MM".` });
-        }
-        const minutosInicio = h1 * 60 + m1;
-        const minutosFin    = h2 * 60 + m2;
-        if (minutosFin <= minutosInicio) {
-          return res.status(400).json({ error: `En ${dia}, el inicio (${inicioStr}) debe ser anterior al fin (${finStr}).` });
-        }
-        bloquesConMinutos.push({
-          inicioMin: minutosInicio,
-          finMin: minutosFin,
-          inicioStr,
-          finStr
-        });
-      }
-      
-      bloquesConMinutos.sort((a, b) => a.inicioMin - b.inicioMin);
-      
-      for (let i = 1; i < bloquesConMinutos.length; i++) {
-        const prev = bloquesConMinutos[i - 1];
-        const curr = bloquesConMinutos[i];
-        
-        if (curr.inicioMin < prev.finMin) {
-          return res.status(400).json({
-            error: `Conflicto interno en ${dia}: el bloque ${curr.inicioStr}-${curr.finStr} se solapa con ${prev.inicioStr}-${prev.finStr}.`
-          });
-        }
-      }
+    const validInt = validarDisponibilidadInterna(disponibilidad);
+    if (!validInt.ok) {
+      return res.status(400).json({ error: validInt.mensaje });
     }
 
-    // Validar que cada bloque cumpla la duración
-    for (const [dia, bloques] of Object.entries(disponibilidad)) {
-      for (const [inicio, fin] of bloques) {
-        const [h1, m1] = inicio.split(':').map(Number);
-        const [h2, m2] = fin.split(':').map(Number);
-        const minutosInicio = h1 * 60 + m1;
-        const minutosFin    = h2 * 60 + m2;
-        const diff = minutosFin - minutosInicio;
-
-        if (diff < duracion) {
-          return res.status(400).json({
-            error: `El bloque en ${dia} de ${inicio} a ${fin} dura ${diff} min, menor a la duración del servicio (${duracion} min).`
-          });
-        }
-        if (diff % duracion !== 0) {
-          return res.status(400).json({
-            error: `El bloque en ${dia} de ${inicio} a ${fin} no es múltiplo exacto de ${duracion} min (sobran ${diff % duracion} min).`
-          });
-        }
-      }
+    const validDur = validarDuracionBloques(disponibilidad, duracion);
+    if (!validDur.ok) {
+      return res.status(400).json({ error: validDur.mensaje });
     }
 
-    // Verificar solapamiento con otros servicios del mismo entrenador
-    const otrosServicios = await Service.find({ entrenador: req.user.userId });
-
-    for (const otro of otrosServicios) {
-      for (const [dia, bloquesNuevo] of Object.entries(disponibilidad)) {
-        const bloquesExistentes = otro.disponibilidad?.get(dia) || [];
-
-        for (const [nuevoInicio, nuevoFin] of bloquesNuevo) {
-          for (const [existenteInicio, existenteFin] of bloquesExistentes) {
-            if (rangosSolapan(nuevoInicio, nuevoFin, existenteInicio, existenteFin)) {
-              return res.status(400).json({
-                error: `Conflicto: Ya tenés un servicio el ${dia} entre ${existenteInicio} y ${existenteFin}`
-              });
-            }
-          }
-        }
-      }
+    const validSolap = await validarSolapamientoConOtros(
+      req.user.userId,
+      disponibilidad,
+      null, // porque es un nuevo servicio, no hay que excluir ninguno
+      rangosSolapan
+    );
+    if (!validSolap.ok) {
+      return res.status(400).json({ error: validSolap.mensaje });
     }
 
     // 2️⃣ Crear servicio
@@ -387,10 +310,36 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
+    const disponibilidad = value.disponibilidad !== undefined
+      ? value.disponibilidad
+      : servicio.disponibilidad; 
+    const duracion = value.duracion !== undefined
+      ? value.duracion
+      : servicio.duracion;
+
+    // 1️⃣ Validación interna de bloques (solapamiento dentro de un mismo día)
+    const validInt = validarDisponibilidadInterna(disponibilidad);
+    if (!validInt.ok) {
+      return res.status(400).json({ error: validInt.mensaje });
+    }
+
+    // 2️⃣ Validar duración de bloques
+    const validDur = validarDuracionBloques(disponibilidad, duracion);
+    if (!validDur.ok) {
+      return res.status(400).json({ error: validDur.mensaje });
+    }
+
+    // 3️⃣ Verificar solapamiento con otros servicios del mismo entrenador, excluyendo este servicio
+    const validSolap = await validarSolapamientoConOtros(req.user.userId, disponibilidad, servicio._id, rangosSolapan);
+    if (!validSolap.ok) {
+      return res.status(400).json({ error: validSolap.mensaje });
+    }
+
     Object.assign(servicio, value); // incluye duracion
     await servicio.save();
     res.json(servicio);
   } catch (err) {
+    console.error('❌ Error al actualizar servicio:', err);
     res.status(500).json({ error: 'Error al actualizar servicio' });
   }
 });
