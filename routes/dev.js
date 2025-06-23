@@ -917,77 +917,81 @@ router.post('/seed', async (req, res) => {
     const trainerStatsDocs = entrenadoresUsuarios.map((u, index) => {
       // Diferentes perfiles de ratings según el entrenador
       let totalRatings, avgRating, ratingCounts;
-      
-      switch(index) {
-        case 0: // Carlos - muy popular
+        switch(index) {
+        case 0: // Carlos - excelente y muy popular
           totalRatings = Math.floor(Math.random() * 20) + 35; // 35-55 ratings
-          avgRating = (Math.random() * 0.5 + 4.3).toFixed(1); // 4.3-4.8
+          avgRating = (Math.random() * 0.3 + 4.6).toFixed(1); // 4.6-4.9
           break;
-        case 1: // Lucía - establecida
+        case 1: // Lucía - muy buena, establecida
           totalRatings = Math.floor(Math.random() * 15) + 25; // 25-40 ratings
-          avgRating = (Math.random() * 0.4 + 4.1).toFixed(1); // 4.1-4.5
+          avgRating = (Math.random() * 0.4 + 4.2).toFixed(1); // 4.2-4.6
           break;
-        case 2: // Miguel - nuevo pero bueno
+        case 2: // Miguel - prometedor pero con algunos problemas
           totalRatings = Math.floor(Math.random() * 10) + 8; // 8-18 ratings
-          avgRating = (Math.random() * 0.6 + 4.0).toFixed(1); // 4.0-4.6
+          avgRating = (Math.random() * 0.6 + 3.4).toFixed(1); // 3.4-4.0
           break;
-        case 3: // Sofía - especializada
+        case 3: // Sofía - excelente especialista
           totalRatings = Math.floor(Math.random() * 12) + 15; // 15-27 ratings
-          avgRating = (Math.random() * 0.5 + 4.2).toFixed(1); // 4.2-4.7
+          avgRating = (Math.random() * 0.3 + 4.5).toFixed(1); // 4.5-4.8
           break;
-        case 4: // Diego - nicho especializado
+        case 4: // Diego - top en su nicho
           totalRatings = Math.floor(Math.random() * 8) + 12; // 12-20 ratings
-          avgRating = (Math.random() * 0.4 + 4.4).toFixed(1); // 4.4-4.8
+          avgRating = (Math.random() * 0.2 + 4.7).toFixed(1); // 4.7-4.9
           break;
-        case 5: // Valentina - creciendo
+        case 5: // Valentina - decente pero irregular
           totalRatings = Math.floor(Math.random() * 12) + 10; // 10-22 ratings
-          avgRating = (Math.random() * 0.5 + 3.9).toFixed(1); // 3.9-4.4
+          avgRating = (Math.random() * 0.8 + 3.0).toFixed(1); // 3.0-3.8
           break;
-        case 6: // Roberto - experimentado
+        case 6: // Roberto - experimentado pero métodos antiguos
           totalRatings = Math.floor(Math.random() * 25) + 30; // 30-55 ratings
-          avgRating = (Math.random() * 0.3 + 4.0).toFixed(1); // 4.0-4.3
+          avgRating = (Math.random() * 0.6 + 3.3).toFixed(1); // 3.3-3.9
           break;
-        case 7: // Camila - moderna
+        case 7: // Camila - muy buena y moderna
           totalRatings = Math.floor(Math.random() * 10) + 18; // 18-28 ratings
-          avgRating = (Math.random() * 0.6 + 4.1).toFixed(1); // 4.1-4.7
-          break;
-        case 8: // Andrés - especialista running
-          totalRatings = Math.floor(Math.random() * 8) + 14; // 14-22 ratings
           avgRating = (Math.random() * 0.4 + 4.3).toFixed(1); // 4.3-4.7
           break;
-        case 9: // Julieta - wellness coach
+        case 8: // Andrés - excelente en running
+          totalRatings = Math.floor(Math.random() * 8) + 14; // 14-22 ratings
+          avgRating = (Math.random() * 0.3 + 4.5).toFixed(1); // 4.5-4.8
+          break;
+        case 9: // Julieta - nueva pero con potencial
           totalRatings = Math.floor(Math.random() * 6) + 7; // 7-13 ratings
-          avgRating = (Math.random() * 0.5 + 4.2).toFixed(1); // 4.2-4.7
+          avgRating = (Math.random() * 0.7 + 3.8).toFixed(1); // 3.8-4.5
           break;
         default:
           totalRatings = Math.floor(Math.random() * 20) + 10;
           avgRating = (Math.random() * 1.0 + 3.5).toFixed(1);
-      }
-
-      // Distribución más realista de ratings basada en el promedio
+      }      // Distribución más realista de ratings basada en el promedio
       const avgNum = parseFloat(avgRating);
       ratingCounts = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
       
       if (avgNum >= 4.5) {
         // Entrenador excelente - mayoría 5 y 4 estrellas
-        ratingCounts['5'] = Math.floor(totalRatings * 0.7);
-        ratingCounts['4'] = Math.floor(totalRatings * 0.25);
+        ratingCounts['5'] = Math.floor(totalRatings * 0.75);
+        ratingCounts['4'] = Math.floor(totalRatings * 0.20);
         ratingCounts['3'] = Math.floor(totalRatings * 0.04);
         ratingCounts['2'] = Math.floor(totalRatings * 0.01);
         ratingCounts['1'] = totalRatings - (ratingCounts['5'] + ratingCounts['4'] + ratingCounts['3'] + ratingCounts['2']);
       } else if (avgNum >= 4.0) {
         // Entrenador bueno - mayoría 4 y 5 estrellas
-        ratingCounts['5'] = Math.floor(totalRatings * 0.5);
-        ratingCounts['4'] = Math.floor(totalRatings * 0.35);
+        ratingCounts['5'] = Math.floor(totalRatings * 0.45);
+        ratingCounts['4'] = Math.floor(totalRatings * 0.40);
         ratingCounts['3'] = Math.floor(totalRatings * 0.12);
         ratingCounts['2'] = Math.floor(totalRatings * 0.02);
         ratingCounts['1'] = totalRatings - (ratingCounts['5'] + ratingCounts['4'] + ratingCounts['3'] + ratingCounts['2']);
+      } else if (avgNum >= 3.5) {
+        // Entrenador promedio - distribución centrada en 3-4 estrellas
+        ratingCounts['5'] = Math.floor(totalRatings * 0.20);
+        ratingCounts['4'] = Math.floor(totalRatings * 0.35);
+        ratingCounts['3'] = Math.floor(totalRatings * 0.30);
+        ratingCounts['2'] = Math.floor(totalRatings * 0.12);
+        ratingCounts['1'] = totalRatings - (ratingCounts['5'] + ratingCounts['4'] + ratingCounts['3'] + ratingCounts['2']);
       } else {
-        // Entrenador promedio - distribución más variada
-        ratingCounts['5'] = Math.floor(totalRatings * 0.3);
-        ratingCounts['4'] = Math.floor(totalRatings * 0.4);
-        ratingCounts['3'] = Math.floor(totalRatings * 0.2);
-        ratingCounts['2'] = Math.floor(totalRatings * 0.08);
+        // Entrenador con problemas - más ratings bajos
+        ratingCounts['5'] = Math.floor(totalRatings * 0.10);
+        ratingCounts['4'] = Math.floor(totalRatings * 0.20);
+        ratingCounts['3'] = Math.floor(totalRatings * 0.35);
+        ratingCounts['2'] = Math.floor(totalRatings * 0.25);
         ratingCounts['1'] = totalRatings - (ratingCounts['5'] + ratingCounts['4'] + ratingCounts['3'] + ratingCounts['2']);
       }
 

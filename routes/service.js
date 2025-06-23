@@ -176,7 +176,7 @@ router.get('/trainers', async (req, res) => {
       "Almagro", "Balvanera", "Barracas", "Belgrano", "Boedo",
       "Caballito", "Chacarita", "Coghlan", "Colegiales", "Constitución",
       "Flores", "Floresta", "La Boca", "La Paternal", "Liniers", "Mataderos",
-      "Monserrat", "Monte Castro", "Nueva Pompeya", "Nuñez", "Palermo",
+      "Monserrat", "Monte Castro", "Nueva Pompeya", "Núñez", "Palermo",
       "Parque Avellaneda", "Parque Chacabuco", "Parque Chas", "Parque Patricios",
       "Puerto Madero", "Recoleta", "Retiro", "Saavedra", "San Cristóbal",
       "San Nicolás", "San Telmo", "Vélez Sarsfield", "Versalles", "Villa Crespo",
@@ -206,8 +206,7 @@ router.get('/trainers', async (req, res) => {
 
     // ====== Buscar entrenadores ======
     const entrenadores = await User.find(userFiltro).select('-password');
-    
-    // === Nuevo bloque: para cada entrenador, traemos sus stats y le agregamos avgRating ===
+      // === Nuevo bloque: para cada entrenador, traemos sus stats y servicios filtrados ===
     const entrenadoresConRating = await Promise.all(
       entrenadores.map(async trainer => {
         const obj = trainer.toObject();
@@ -215,7 +214,22 @@ router.get('/trainers', async (req, res) => {
         obj.avgRating    = stats?.avgRating    ?? 0;
         obj.totalRatings = stats?.totalRatings ?? 0;
         // Añadir avatarUrl si existe
-        obj.avatarUrl = trainer.avatarUrl || null; //para poder pasasrlo al frontend por el JSON
+        obj.avatarUrl = trainer.avatarUrl || null;
+        
+        // Agregar servicios filtrados del entrenador
+        const serviciosDelEntrenador = servicios.filter(s => 
+          s.entrenador.toString() === trainer._id.toString()
+        ).map(s => ({
+          _id: s._id,
+          titulo: s.titulo,
+          precio: s.precio,
+          categoria: s.categoria,
+          duracion: s.duracion,
+          presencial: s.presencial,
+          vistas: s.vistas
+        }));
+        
+        obj.servicios = serviciosDelEntrenador;
         return obj;
       })
     );
