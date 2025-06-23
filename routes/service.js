@@ -2,7 +2,8 @@ const Joi = require('joi');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const duration = require('dayjs/plugin/duration'); // Importa el plugin de duración
-dayjs.extend(duration); // Extiende dayjs con el plugin de duraciónconst express = require('express');
+const jwt = require('jsonwebtoken'); // Agregar JWT
+dayjs.extend(duration); // Extiende dayjs con el plugin de duración
 dayjs.extend(utc);
 const express = require('express');
 const router = express.Router();
@@ -279,10 +280,33 @@ router.get('/my', authMiddleware, async (req, res) => {
 // 4️⃣ Detalle de un servicio por ID (público)
 router.get('/:id', async (req, res) => {
   try {
-    // Incrementar el contador de vistas
-    await Service.findByIdAndUpdate(req.params.id, { $inc: { vistas: 1 } });
+    // Verificar si hay token válido y extraer info del usuario
+    let userRole = null;
+    let userId = null;
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded && decoded.userId) {
+          const user = await User.findById(decoded.userId);
+          if (user) {
+            userRole = user.role;
+            userId = user._id.toString();
+          }
+        }
+      } catch (tokenError) {
+        // Token inválido, pero no bloqueamos la consulta
+      }
+    }
 
-    // Buscar y devolver el servicio actualizado (sin esperar a que se actualicen las vistas en el doc retornado)
+    // Solo incrementar vistas si NO es un entrenador
+    if (userRole !== 'entrenador') {
+      await Service.findByIdAndUpdate(req.params.id, { $inc: { vistas: 1 } });
+    }
+
+    // Buscar y devolver el servicio
     const servicio = await Service.findById(req.params.id)
       .populate('entrenador', 'nombre apellido email'); // EN BASE AL ID De entrenador, trae nombre, apellido y email
 
@@ -290,6 +314,7 @@ router.get('/:id', async (req, res) => {
 
     res.json(servicio);
   } catch (err) {
+    console.error('❌ Error al obtener servicio:', err);
     res.status(500).json({ error: 'Error al obtener el servicio' });
   }
 });
