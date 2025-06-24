@@ -338,9 +338,20 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const servicio = await Service.findById(req.params.id);
-    if (!servicio) return res.status(404).json({ error: 'No existe el servicio' });
-    if (servicio.entrenador.toString() !== req.user.userId) {
+    if (!servicio) return res.status(404).json({ error: 'No existe el servicio' });    if (servicio.entrenador.toString() !== req.user.userId) {
       return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    // Verificar si hay reservas activas para este servicio
+    const reservasActivas = await Reserva.find({
+      servicio: req.params.id,
+      estado: { $in: ['Pendiente', 'Aceptado'] }
+    });
+
+    if (reservasActivas.length > 0) {
+      return res.status(400).json({
+        error: 'No se puede editar el servicio porque tiene reservas activas (pendientes o aceptadas). Debe cancelar o finalizar las reservas antes de editar.'
+      });
     }
 
     // Validar body en actualización también
